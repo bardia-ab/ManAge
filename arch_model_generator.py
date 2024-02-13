@@ -1,0 +1,12 @@
+import time
+from arch.arch_model import DeviceModel
+from scripts.utility_functions import store_data
+import scripts.config as cfg
+
+start_time = time.time()
+viv_rpt_path = r"C:\Users\t26607bb\Desktop\Architecture Graph\zu3eg.tar\fpga_report.viv_rpt"
+device = DeviceModel()
+device.parse(viv_rpt_path)
+
+store_data(cfg.load_path, f'device_{device.name}.data', device)
+print(time.time() - start_time)

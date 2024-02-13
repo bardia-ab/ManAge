@@ -1,0 +1,7 @@
+Windows:
+  arch_graph_path : C:\Users\t26607bb\Desktop\graph_zcu9eg
+  Data_path       : C:\Users\t26607bb\Desktop\CPS_Project\Path_Search\Data_2
+
+Linux:
+  arch_graph_path : /home/bardia/Desktop/bardia/Architecture Graph/ZCU9EG
+  Data_path       : /home/bardia/Desktop/bardia/Timing_Characterization/Data
