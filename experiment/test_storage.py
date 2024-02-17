@@ -1,21 +1,20 @@
-import sys, time
+import os, time
 import networkx as nx
 from dataclasses import dataclass, field
 from itertools import product
 from typing import List, Set
 from tqdm import tqdm
-#sys.path.insert(0, r'..\xil_res')
-#sys.path.insert(0, r'..\scripts')
 from xil_res.architecture import Arch
 from xil_res.minimal_config import MinConfig
 from experiment.clock_domain import ClockDomain, ClockGroup
 import scripts.config as cfg
+import scripts.utility_functions as util
 
 @dataclass
 class TestCollection:
     iteration       :   int
     desired_tile    :   str
-    queue           :   List             = field(default_factory = list)
+    queue           :   set             = field(default_factory = Set)
     TC              :   MinConfig       = field(default = None)
     device          :   Arch            = field(default = None)
     clock_domains   :   List            = field(default_factory = list)
@@ -23,15 +22,38 @@ class TestCollection:
     pbar            :   tqdm            = field(default = None)
     n_pips          :   int             = field(default = 0)
     TC_idx          :   int             = field(default=0)
-    covered_pips    :   list            = field(default_factory=list)
+
+    def __post_init__(self):
+        # create the iteration folder
+        cfg.minimal_config_path = os.path.join(cfg.minimal_config_path, f'iter{self.iteration}')
+        util.create_folder(cfg.minimal_config_path)
+
+        self.create_clock_domains()
+        self.create_pbar()
+        self.n_pips = len(self.queue)
+
+    def __getstate__(self):
+        state = self.__class__.__dict__.copy()  # Copy the dict to avoid modifying the original
+        # Remove the attribute that should not be pickled
+        del state['pbar']
+        return state
+
+    def __setstate__(self, state):
+        # Restore instance attributes (temp_value will be missing)
+        self.__dict__.update(state)
 
     def initialize(self):
+        # create the iteration folder
+        cfg.minimal_config_path = os.path.join(cfg.minimal_config_path, f'iter{self.iteration}')
+        util.create_folder(cfg.minimal_config_path)
+
         self.create_clock_domains()
         self.create_pbar()
         self.n_pips = len(self.queue)
 
     def create_pbar(self):
-        self.pbar = tqdm(total=len(self.queue))
+        custom_format = "{desc}{bar} {percentage:.0f}% | {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}] >> {postfix}"
+        self.pbar = tqdm(total=len(self.queue), bar_format=custom_format, desc="\033[91m")
 
     def get_clock_domain(self, node):
         return next(CD for CD in self.clock_domains if CD.pattern.match(node))
@@ -67,7 +89,8 @@ class TestCollection:
         for CD in self.clock_domains:
             CD.assign_source_sink_nodes(TC.G)
 
-        TC.CD = {clock_group: clock_group.CD for clock_group in self.clock_groups}
+        #TC.CD = {clock_group: clock_group.CD for clock_group in self.clock_groups}
+        TC.CD = self.clock_groups
 
         # assign pip_v node
         self.assign_pip_v_node(TC.G)
@@ -85,11 +108,11 @@ class TestCollection:
 
     def finish_TC(self, TC: MinConfig):
         result = True
-        coverage = (self.n_pips - len(self.queue)) / len(self.queue)
+        coverage = (self.n_pips - len(self.queue)) / self.n_pips
         source_node = {CD.src_sink_node for CD in self.clock_domains if CD.type == 'source'}.pop()
         sink_node = {CD.src_sink_node for CD in self.clock_domains if CD.type == 'sink'}.pop()
         cond_capacity = (cfg.max_capacity - len(TC.CUTs)) <= 0
-        cond_exec_time = time.time() - TC.start_TC_time > (cfg.long_TC_process_time + 15 * (coverage // 0.3))
+        cond_exec_time = time.time() - TC.start_TC_time > (cfg.long_TC_process_time + 5 * (coverage // 0.3))
         cond_empty_queue = not self.queue
         try:
             cond_path_existance = nx.has_path(TC.G, source_node, sink_node)
@@ -108,3 +131,24 @@ class TestCollection:
             result = False
 
         return result
+
+    def update_coverage(self):
+        cut = self.TC.CUTs[-1]
+        prior_length = len(self.queue)
+        self.queue -= cut.get_covered_pips()
+        current_length = len(self.queue)
+        self.pbar.set_description(f'TC{self.TC.TC_idx} >> CUT{len(self.TC.CUTs)} >> Remaining PIPs')
+        self.pbar.set_postfix_str(f'{cut.main_path.pip}')
+        self.pbar.update(prior_length - current_length)
+
+    def store_TC(self):
+        util.store_data(cfg.minimal_config_path, f'TC{self.TC.TC_idx}.data', self.TC)
+
+        if self.queue:
+            #util.store_data(cfg.Data_path, f'test_collection.data', self)
+            pass
+        else:
+            if os.path.exists(os.path.join(cfg.Data_path, 'test_collection.data')):
+                os.remove(os.path.join(cfg.Data_path, 'test_collection.data'))
+
+        self.TC_idx += 1

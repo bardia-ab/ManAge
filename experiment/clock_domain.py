@@ -64,6 +64,9 @@ class ClockGroup:
     def __hash__(self):
         return hash(self.name)
 
+    @property
+    def is_free(self):
+        return self.CD == ClockDomain()
 
     def reset(self, test_collection):
         self.remove_FF(test_collection)

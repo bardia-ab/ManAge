@@ -66,7 +66,8 @@ class PIP(Edge):
         block_nodes = set()
         LUT_primitive, LUT_capacity, occupancy = None, None, None
         if nd.get_clb_node_type(self.neigh_v) == 'LUT_in':
-            LUT_primitive = next(TC.filter_LUTs(name=nd.get_bel(self.neigh_v)))
+            #LUT_primitive = next(TC.filter_LUTs(name=nd.get_bel(self.neigh_v)))
+            LUT_primitive = TC.LUTs[nd.get_bel(self.neigh_v)]
             LUT_capacity = LUT_primitive.capacity
             occupancy = 2 if (cfg.LUT_in6_pattern.match(self.neigh_v)) else 1
 
@@ -78,7 +79,8 @@ class PIP(Edge):
                 block_nodes.update(TC.filter_nodes(**attributes))
 
         if nd.get_clb_node_type(self.pred_u) in {'CLB_out', 'CLB_muxed'}:
-            LUT_primitive = next(TC.filter_LUTs(name=nd.get_bel(self.pred_u)))
+            #LUT_primitive = next(TC.filter_LUTs(name=nd.get_bel(self.pred_u)))
+            LUT_primitive = TC.LUTs[nd.get_bel(self.pred_u)]
             LUT_capacity = LUT_primitive.capacity
             occupancy = 2 if (cfg.MUXED_CLB_out_pattern.match(self.pred_u)) else 1
 

@@ -300,11 +300,13 @@ class Node:
         return f'{tile}/{port}'
 
     @staticmethod
-    def dislocate_node(tiles_map, node: str|None, D_origin: str):
+    def dislocate_node(tiles_map, node: str|None, D_origin: str, origin=None):
         if node is None:
             return node
 
-        origin = Node.get_coordinate(node)
+        if origin is None:
+            origin = Node.get_coordinate(node)
+
         RLOC_node = Node.get_RLOC_node(node, origin)
         return Node.get_DLOC_node(tiles_map, RLOC_node, D_origin)
 

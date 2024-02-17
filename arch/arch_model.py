@@ -1,10 +1,7 @@
-import re, os, time
-from scripts.utility_functions import *
+import re
 from xil_res.node import Node as nd
 from dataclasses import dataclass, field
 from typing import List, Set
-import scripts.config as cfg
-import concurrent.futures
 
 @dataclass
 class DeviceModel:
@@ -12,7 +9,7 @@ class DeviceModel:
     CR_HCS_Y_dict   :   dict    = field(default_factory=dict)
     clb_site_dict   :   dict    = field(default_factory=dict)
     tiles           :   Set     = field(default_factory=set)
-    #wires_dict      :   dict    = field(default_factory=dict)
+    wires_dict      :   dict    = field(default_factory=dict)
     pips            :   Set     = field(default_factory=set)
     name            :   str     = field(default_factory=str)
 

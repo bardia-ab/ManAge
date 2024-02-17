@@ -13,10 +13,9 @@ from xil_res.primitive import FF, LUT, SubLUT
 
 class Arch:
 
-    __slots__ = ('name', 'relocation', 'pips', 'wires_dict', 'tiles_map', 'CRs', 'G', 'pips_length_dict', 'weight')
-    def __init__(self, name: str, relocation=False):
+    #__slots__ = ('name', 'relocation', 'pips', 'wires_dict', 'tiles_map', 'CRs', 'G', 'pips_length_dict', 'weight')
+    def __init__(self, name: str):
         self.name               = name.lower()
-        self.relocation         = relocation
         self.pips               = set()
         self.wires_dict         = {}
         self.tiles_map          = {}
@@ -29,13 +28,23 @@ class Arch:
     def __repr__(self):
         return self.name
 
+    def __getstate__(self):
+        state = self.__dict__.copy()  # Copy the dict to avoid modifying the original
+        # Remove the attribute that should not be pickled
+        del state['weight']
+        return state
+
+    def __setstate__(self, state):
+        # Restore instance attributes (temp_value will be missing)
+        self.__dict__.update(state)
+
+
     def init(self):
         device = util.load_data(cfg.load_path, f'device_{self.name}.data')
         #self.pips = util.load_data(cfg.load_path, 'pips.data')
         self.pips = device.pips
         #self.wires_dict = util.load_data(cfg.load_path, 'wires_dict.data')
-        if self.relocation:
-            self.wires_dict = device.wires_dict
+        self.wires_dict = device.wires_dict
 
         self.init_tiles_map()
         self.init_CRs(device.CR_tiles_dict, device.CR_HCS_Y_dict)

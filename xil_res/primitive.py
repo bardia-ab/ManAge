@@ -122,6 +122,9 @@ class SubLUT(Primitive):
             if not ((nd.get_primitive(input) == 'LUT') and (0 <= nd.get_bel_index(input) <= 6)):
                 raise Exception(f'{input} is invalid for {self.name}!!!')
 
+            if self._inputs:
+                breakpoint()
+
             self._inputs.add(input)
 
 
@@ -137,6 +140,9 @@ class SubLUT(Primitive):
 
         self._output = outp
 
+    def get_LUT_name(self):
+        return re.sub('[56]LUT', 'LUT', self.name)
+
     def fill(self, output, func, *inputs):
         for input in inputs:
             self.inputs = input
@@ -147,7 +153,7 @@ class SubLUT(Primitive):
 
     def empty(self):
         self.usage  = 'free'
-        self.inputs = set()
+        self._inputs = set()
         self.output = None
         self.func   = None
 
@@ -163,22 +169,20 @@ class SubLUT(Primitive):
         return occupancy
 
     def add_to_LUT(self, TC):
-        LUT_name = re.sub('[56]LUT', 'LUT', self.name)
-        LUT_primitive = next(TC.filter_LUTs(name=LUT_name))
+        LUT_primitive = TC.LUTs[self.get_LUT_name()]
         LUT_primitive.add_subLUT(self)
 
     def remove_from_LUT(self, TC):
-        LUT_name = re.sub('[56]LUT', 'LUT', self.name)
-        LUT_primitive = next(TC.filter_LUTs(name=LUT_name))
+        LUT_primitive = TC.LUTs[self.get_LUT_name()]
         LUT_primitive.remove_subLUT(self)
 
-    def global_set(self, TC, tiles_map, other_subLUT):
+    def global_set(self, tiles_map, other_subLUT):
         D_origin = nd.get_coordinate(self.name)
         output = nd.dislocate_node(tiles_map, other_subLUT.output, D_origin)
 
         inputs = {nd.dislocate_node(tiles_map, input, D_origin) for input in other_subLUT.inputs}
         self.fill(output, other_subLUT.func, *inputs)
-        self.add_to_LUT(TC)
+        #self.add_to_LUT(TC)
 
     def global_reset(self, TC):
         self.remove_from_LUT(TC)
@@ -210,6 +214,10 @@ class LUT(Primitive):
     def has_freed(self):
         return (self.usage != 'blocked') and (self.prev_capacity < self.capacity)
 
+    @property
+    def has_emptied(self):
+        return (self.usage == 'free') and (self.capacity == cfg.LUT_Capacity) and (self.prev_capacity < self.capacity)
+
     def add_subLUT(self, subLUT: SubLUT):
         LUT_name = re.sub('[56]LUT', 'LUT', subLUT.name)
         if self.name != LUT_name:
@@ -225,7 +233,8 @@ class LUT(Primitive):
             self.usage = 'used'
 
     def remove_subLUT(self, subLUT: SubLUT):
-        if self.name != subLUT.name:
+        LUT_name = re.sub('[56]LUT', 'LUT', subLUT.name)
+        if self.name != LUT_name:
             raise ValueError(f'subLUT: {subLUT} does not belong to LUT: {self}')
 
         self.subLUTs.remove(subLUT)

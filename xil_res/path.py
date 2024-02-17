@@ -1,3 +1,4 @@
+import copy
 import sys
 from heapq import heappush, heappop
 from abc import ABC, abstractmethod
@@ -6,6 +7,7 @@ import networkx as nx
 from typing import List, Set, Tuple
 from xil_res.node import Node as nd
 from xil_res.edge import PIP, Edge
+from experiment.clock_domain import ClockGroup
 from xil_res.primitive import SubLUT, FF
 #sys.path.insert(0, r'..\scripts')
 import scripts.config as cfg
@@ -20,7 +22,8 @@ class Path:
         self._nodes     = []
         self.subLUTs    = set()
         self.FFs        = set()
-        self.prev_CD    = {}
+        #self.prev_CD    = {}
+        self.prev_CD = []
 
     def __repr__(self):
         if self.nodes:
@@ -73,6 +76,9 @@ class Path:
 
             self._nodes.append(vertex)
 
+    def get_prev_CD(self, CG: ClockGroup):
+        return next(clock_group for clock_group in self.prev_CD if clock_group == CG)
+
     def get_edges(self) -> Set[Tuple[str, str]]:
         return set(zip(self.nodes, self.nodes[1:]))
 
@@ -119,7 +125,8 @@ class Path:
             LUT_func = self.get_LUT_func(LUT_in)
 
             sublut_name = f'{nd.get_tile(LUT_in)}/{nd.get_label(LUT_in)}{TC.get_subLUT_bel(LUT_output, LUT_in)}'
-            subLUT = next(TC.filter_subLUTs(name=sublut_name))
+            #subLUT = next(TC.filter_subLUTs(name=sublut_name))
+            subLUT = TC.subLUTs[sublut_name]
             subLUT.fill(LUT_output, LUT_func, LUT_in)
             subLUTs.add(subLUT)
 
@@ -321,7 +328,6 @@ class PathOut(Path):
                 path = self.path_finder(TC.G, self.src, self.sink, **attr)
                 self.nodes = path
             except nx.NetworkXNoPath:
-                breakpoint()
                 self.error = True
                 if cfg.print_message:
                     print(f'No path found for {self.type}!')
@@ -390,7 +396,6 @@ class PathIn(Path):
                 path = self.path_finder(TC.G, self.src, self.sink, **attr)
                 self.nodes = path
             except nx.NetworkXNoPath:
-                breakpoint()
                 self.error = True
                 if cfg.print_message:
                     print(f'No path found for {self.type}!')
@@ -442,7 +447,7 @@ class MainPath(Path):
     def route(self, test_collection):
         TC = test_collection.TC
         pips = test_collection.queue
-        self.prev_CD = TC.CD.copy()
+        self.prev_CD = copy.deepcopy(TC.CD)
         paths = self.sort_paths()
         for idx, path in enumerate(paths):
             if path.type == 'path_in':
@@ -452,10 +457,9 @@ class MainPath(Path):
 
             if path.error:
                 self.error = True
-                breakpoint()
                 return
 
-            path.prev_CD = TC.CD.copy()
+            path.prev_CD = copy.deepcopy(TC.CD)
             TC.fill_CUT(test_collection, path)
 
         self.path_in = next(path for path in paths if path.type == 'path_in')
@@ -479,6 +483,9 @@ class NotPath(Path):
         edges.update(set(product(sinks, {self.sink})))
         G.add_edges_from(edges)
 
+    def remove_virtual_source_sink(self, G: nx.DiGraph):
+        G.remove_nodes_from({self.src, self.sink})
+
     def get_blocked_nodes(self, test_collection):
         device = test_collection.device
         TC = test_collection.TC
@@ -498,7 +505,7 @@ class NotPath(Path):
         device = test_collection.device
         TC = test_collection.TC
         cut = TC.CUTs[-1]
-        self.prev_CD = TC.CD.copy()
+        self.prev_CD = copy.deepcopy(TC.CD)
         self.assign_virtual_source_sink(TC.G, cut.main_path)
         dummy_nodes = [self.src, self.sink]
         blocked_nodes = self.get_blocked_nodes(test_collection)
@@ -515,6 +522,8 @@ class NotPath(Path):
                 self.error = True
                 if cfg.print_message:
                     print(f'No path found for {self.type}!')
+
+        self.remove_virtual_source_sink(TC.G)
 
         if not self.error:
             TC.fill_CUT(test_collection, self)

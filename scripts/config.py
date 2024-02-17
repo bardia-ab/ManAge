@@ -1,5 +1,8 @@
-import yaml, platform, os, re, sys
-#sys.path.insert(0, r'..')
+import yaml, platform, os, re
+from pathlib import Path
+if Path(os.getcwd()).parts[-1] == 'scripts':
+    os.chdir(os.path.abspath('..'))
+
 with open('config.yaml', 'r') as file:
     config = yaml.safe_load(file)
 
@@ -58,6 +61,9 @@ clock_groups = {'W_T': 'W_B', 'W_B': 'W_T', 'E_T': 'E_B', 'E_B': 'E_T'}
 ####### PIPs
 pip_v = 'v'
 
+####### Path
+max_path_length = 10
+
 ###### TC
 max_capacity = 16
-long_TC_process_time = 120
+long_TC_process_time = 60
