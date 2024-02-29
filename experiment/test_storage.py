@@ -112,7 +112,7 @@ class TestCollection:
         source_node = {CD.src_sink_node for CD in self.clock_domains if CD.type == 'source'}.pop()
         sink_node = {CD.src_sink_node for CD in self.clock_domains if CD.type == 'sink'}.pop()
         cond_capacity = (cfg.max_capacity - len(TC.CUTs)) <= 0
-        cond_exec_time = time.time() - TC.start_TC_time > (cfg.long_TC_process_time + 5 * (coverage // 0.3))
+        cond_exec_time = time.time() - TC.start_TC_time > (cfg.long_TC_process_time + (cfg.long_TC_process_time // 10) * (coverage // 0.3))
         cond_empty_queue = not self.queue
         try:
             cond_path_existance = nx.has_path(TC.G, source_node, sink_node)

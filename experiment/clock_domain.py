@@ -68,8 +68,8 @@ class ClockGroup:
     def is_free(self):
         return self.CD == ClockDomain()
 
-    def reset(self, test_collection):
-        self.remove_FF(test_collection)
+    def reset(self, test_collection, path=None):
+        self.remove_FF(test_collection, path)
         #self.conflict   = set()
         self._CD         = ClockDomain()
 
@@ -92,11 +92,12 @@ class ClockGroup:
         # remove the virtual_src_sink of other_CDs from the nodes of the clock_group
         self.remove_other_CDs_virtual_src_sink(test_collection)
 
-    def remove_FF(self, test_collection):
+    def remove_FF(self, test_collection, path):
         TC = test_collection.TC
 
-        # restore the virtual_src_sink of the clock_group from conflicted_clock_groups_nodes
-        self.restore_invalid_virtual_src_sink(TC.G)
+        if path is None:
+            # restore the virtual_src_sink of the clock_group from conflicted_clock_groups_nodes
+            self.restore_invalid_virtual_src_sink(TC.G)
 
         # restore the virtual_src_sink of other_CDs from the nodes of the clock_group
         self.restore_other_CDs_virtual_src_sink(test_collection)
@@ -163,3 +164,13 @@ class ClockGroup:
         else:
             if clock_domain != self.CD:
                 raise ValueError(f'CD: {clock_domain} cannot set to {self}')
+
+    @staticmethod
+    def CD_changed(current_CD, prev_CD):
+        result = False
+        for curr_CG, prev_CG in zip(current_CD, prev_CD):
+            if curr_CG.CD != prev_CG.CD:
+                result = True
+                break
+
+        return result
