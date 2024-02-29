@@ -233,7 +233,7 @@ class LUT(Primitive):
             self.usage = 'used'
 
     def remove_subLUT(self, subLUT: SubLUT):
-        LUT_name = re.sub('[56]LUT', 'LUT', subLUT.name)
+        LUT_name = subLUT.get_LUT_name()
         if self.name != LUT_name:
             raise ValueError(f'subLUT: {subLUT} does not belong to LUT: {self}')
 

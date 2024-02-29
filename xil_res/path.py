@@ -299,6 +299,7 @@ class PathOut(Path):
         return blocked_nodes
 
     def route(self, TC, pips, first_order=False, main_path=None):
+        path = []
         dummy_nodes = [self.src, self.sink] if self.estimation else [self.sink]
         blocked_nodes = self.get_blocked_nodes(TC, pips, first_order, main_path)
         attr = {'conflict_free': True, 'dummy_nodes': dummy_nodes, 'blocked_nodes': blocked_nodes}
@@ -317,20 +318,22 @@ class PathOut(Path):
                 try:
                     path = self.path_finder(TC.G, path[0], self.sink, **attr)
                     self.nodes = path
-                except:
-                    pass
-            else:
-                self.nodes = path
+                except nx.NetworkXNoPath:
+                    path = []
 
         except nx.NetworkXNoPath:
             try:
                 attr['conflict_free'] = False
                 path = self.path_finder(TC.G, self.src, self.sink, **attr)
-                self.nodes = path
             except nx.NetworkXNoPath:
-                self.error = True
-                if cfg.print_message:
-                    print(f'No path found for {self.type}!')
+                pass
+
+        if path:
+            self.nodes = path
+        else:
+            self.error = True
+            if cfg.print_message:
+                print(f'No path found for {self.type}!')
 
 class PathIn(Path):
 

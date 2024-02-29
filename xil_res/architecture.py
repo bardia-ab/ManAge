@@ -20,6 +20,7 @@ class Arch:
         self.wires_dict         = {}
         self.tiles_map          = {}
         self.CRs                = set()
+        self.site_dict          = {}
         self.G                  = nx.DiGraph()
         self.pips_length_dict   = {}
         self.init()
@@ -43,6 +44,7 @@ class Arch:
         device = util.load_data(cfg.load_path, f'device_{self.name}.data')
         #self.pips = util.load_data(cfg.load_path, 'pips.data')
         self.pips = device.pips
+        self.site_dict = device.clb_site_dict
         #self.wires_dict = util.load_data(cfg.load_path, 'wires_dict.data')
         self.wires_dict = device.wires_dict
 
@@ -169,7 +171,7 @@ class Arch:
     def set_compressed_graph(self, tile: str, default_weight=1):
         x, y = nd.get_x_coord(tile), nd.get_y_coord(tile)
         xlim_down, xlim_up, ylim_down, ylim_up = (x - 12 - 4), (x + 12 + 4), (y - 12 - 4), (y + 12 + 4)
-        G = dev.get_graph(default_weight=default_weight, xlim_down=xlim_down, xlim_up=xlim_up, ylim_down=ylim_down, ylim_up=ylim_up)
+        G = self.get_graph(default_weight=default_weight, xlim_down=xlim_down, xlim_up=xlim_up, ylim_down=ylim_down, ylim_up=ylim_up)
         pipjuncs = {node for pip in self.gen_pips(tile) for node in pip}
         in_ports = set(filter(lambda node: nd.get_INT_node_mode(G, node) == 'in', pipjuncs))
         out_ports = set(filter(lambda node: nd.get_INT_node_mode(G, node) == 'out', pipjuncs))
@@ -208,10 +210,12 @@ class Arch:
         self.G = copy.deepcopy(G)
 
         # set pips_length_dict
-        pips = dev.gen_pips(tile)
+        pips = self.gen_pips(tile)
         for pip in pips:
             if pip[0] in path_in_length_dict and pip[1] in path_out_length_dict:
                 self.pips_length_dict[pip] = path_in_length_dict[pip[0]] + path_out_length_dict[pip[1]]
+
+        util.store_data(cfg.graph_path, f'G_{self.name}_{tile}.data', G)
 
     def set_pips_length_dict(self, tile: str):
         sources = set(filter(cfg.Source_pattern.match, self.G))
@@ -239,11 +243,69 @@ class Arch:
 
         self.G.remove_edges_from(edges)
 
+    def get_local_pips(self, desired_tile):
+        G = copy.deepcopy(self.G)
+        invalid_nodes = set(filter(lambda node: nd.get_coordinate(node) != nd.get_coordinate(desired_tile), self.G))
+        G.remove_nodes_from(invalid_nodes)
+        G_copy = copy.deepcopy(G)
 
+        pips = self.gen_pips(desired_tile)
+        all_sources = list(filter(cfg.Source_pattern.match, G))
+        all_sinks = list(filter(cfg.Sink_pattern.match, G))
+        covered_pips = set()
+
+        for group, conflict_group in cfg.clock_groups.items():
+            sources = set(filter(lambda node: nd.get_clock_group(node) == group, all_sources))
+            sinks = set(filter(lambda node: nd.get_clock_group(node) == conflict_group, all_sinks))
+
+            # remove CLB nodes whose directions are different from the group and conflict_group
+            forbidden_nodes = {node for node in G if (nd.get_clock_group(node) is not None) and nd.get_clock_group(node) not in {group, conflict_group}}
+            G.remove_nodes_from(forbidden_nodes)
+
+            edges = set(product({cfg.virtual_source_node}, sources))
+            for edge in edges:
+                G.add_edge(*edge, weight=0)
+
+            edges = set(product(sinks, {cfg.virtual_sink_node}))
+            for edge in edges:
+                G.add_edge(*edge, weight=0)
+
+            if not (sources and sinks):
+                continue
+
+            pip_u = {pip[0] for pip in pips}
+            pip_v = {pip[1] for pip in pips}
+
+
+            no_path_ports = set(filter(lambda node: not nx.has_path(G, cfg.virtual_source_node, node), pip_u))
+            no_path_ports.update(filter(lambda node: not nx.has_path(G, node, cfg.virtual_sink_node), pip_v))
+
+            covered_pips.update(set(filter(lambda pip: pip[0] not in no_path_ports and pip[1] not in no_path_ports, pips)))
+            pips -= covered_pips
+
+            G = copy.deepcopy(G_copy)
+
+        return covered_pips
+
+    def get_pips(self, desired_tile, mode='all'):
+        self.set_pips_length_dict(desired_tile)
+
+        if mode == 'local':
+            pips = self.get_local_pips(desired_tile)
+
+            # remove nodes whose coordinates are different from desired_tile
+            invalid_nodes = set(filter(lambda node: nd.get_coordinate(node) != nd.get_coordinate(desired_tile), self.G))
+            self.G.remove_nodes_from(invalid_nodes)
+        else:
+            pips = set(self.pips_length_dict.keys())
+
+        return pips
 
 
 if __name__ == '__main__':
+    import os
     t1 = time.time()
+    os.chdir(os.path.abspath('..'))
     dev = Arch('ZCU9')
     pips = dev.gen_pips('INT_X46Y90')
     site_pips = dev.gen_site_pips('CLEM_X46Y90')

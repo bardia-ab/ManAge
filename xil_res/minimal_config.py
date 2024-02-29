@@ -79,10 +79,13 @@ class MinConfig:
         # 8- block source & sink
         #self.block_LUTs()
         self.block_source_sink(path)
+        self.test_CD()
 
     def remove_CUT(self, test_collection):
         cut = self.CUTs[-1]
-
+        '''CD = copy.deepcopy(self.CD)
+        srcs = list(self.G.neighbors(cfg.virtual_source_node))
+        sinks = list(self.G.predecessors(cfg.virtual_sink_node))'''
         # remove cfg.pip_v
         #pip_v = cut.main_path.pip[1]
         #self.G.remove_edge(cfg.pip_v, pip_v)
@@ -92,6 +95,7 @@ class MinConfig:
             self.restore_source_sink(path)
             # 1- reset CD
             self.reset_CDs(test_collection, path)
+            self.test_CD()
             # 3- remove  sublut from LUT
             self.empty_LUTs(path.subLUTs)
             self.empty_FFs(path.FFs)
@@ -263,14 +267,25 @@ class MinConfig:
 
     def unblock_LUTs(self):
         freed_LUTs = self.filter_LUTs(has_freed=True)
+        edges = set()
         for freed_LUT in freed_LUTs:
             tile, label = freed_LUT.tile, freed_LUT.label
             occupied_LUT_in = {input for subLUT in freed_LUT.subLUTs for input in subLUT.inputs}
             LUT_inputs = {nd.get_LUT_input(tile, label, idx) for idx in range(1, 6)} - occupied_LUT_in
             self.blocked_nodes -= LUT_inputs
 
+            # unblock LUT_in6 and MUXED_CLB_out if the LUT has gotten empty
             if freed_LUT.has_emptied:
                 self.blocked_nodes -= {nd.get_MUXED_CLB_out(tile, label), nd.get_LUT_input(tile, label, 6)}
+
+            # restore free FFs in front of freed LUTs
+            sources = {node for node in self.G.neighbors(cfg.virtual_source_node)
+                       if nd.get_tile(node) == freed_LUT.tile
+                       and nd.get_label(node) == freed_LUT.label
+                       and self.FFs[nd.get_bel(node)].usage == 'free'}
+            edges.update(set(product({cfg.virtual_source_node}, sources)))
+
+        self.G.add_edges_from(edges)
 
     ########## Block nodes & edges ####################
     def block_path(self, path):
@@ -282,11 +297,11 @@ class MinConfig:
         self.blocked_nodes.update(nodes)
 
         if any(map(lambda node: nd.get_clb_node_type(node) == 'LUT_in', path)):
-            LUT_in = next(node for node in path if nd.get_clb_node_type(node) == 'LUT_in')
-            tile, label = nd.get_tile(LUT_in), nd.get_label(LUT_in)
-            self.blocked_nodes.update(self.get_global_nodes(nd.get_LUT_input(tile, label, 6)))
-            self.blocked_nodes.update(self.get_global_nodes(nd.get_MUXED_CLB_out(tile, label)))
-            self.block_LUTs()
+            for LUT_in in filter(lambda node: nd.get_clb_node_type(node) == 'LUT_in', path):
+                tile, label = nd.get_tile(LUT_in), nd.get_label(LUT_in)
+                self.blocked_nodes.update(self.get_global_nodes(nd.get_LUT_input(tile, label, 6)))
+                self.blocked_nodes.update(self.get_global_nodes(nd.get_MUXED_CLB_out(tile, label)))
+                self.block_LUTs()
 
     def unblock_path(self, path):
         # MUXED_CLB_out and LUT_in6 must be unblocked in unblock_LUTs
@@ -301,7 +316,23 @@ class MinConfig:
             self.unblock_LUTs()
 
     def block_source_sink(self, path):
+        if path.type == 'path_not':
+            return
+
         edges = set()
+        CDs = {CG.CD for CG in self.CD if CG.CD != ClockDomain()}
+        for CD in CDs:
+            for node in path:
+                if CD.pattern.match(node):
+                    if CD.type == 'source':
+                        edges.update(set(product({CD.src_sink_node}, self.get_global_nodes(node))))
+                    if CD.type == 'sink':
+                        edges.update(set(product(self.get_global_nodes(node), {CD.src_sink_node})))
+
+        self.G.remove_edges_from(edges)
+
+
+        '''edges = set()
         #clock_domains = [CD for _, CD in self.CD.items() if CD.name != 'None']
         #clock_domains = [CG.CD for CG in self.CD if CG.CD.name != 'None']
         clock_domains = [CG.CD for CG in self.CD if path.get_prev_CD(CG).CD == ClockDomain() and CG.CD != ClockDomain()]
@@ -322,10 +353,32 @@ class MinConfig:
             sources = {node for node in self.G.neighbors('s') if nd.get_tile(node) == occupied_LUT.tile and nd.get_label(node) == occupied_LUT.label}
             edges.update(set(product({cfg.virtual_source_node}, sources)))
 
-        self.G.remove_edges_from(edges)
+        self.G.remove_edges_from(edges)'''
 
     def restore_source_sink(self, path):
+        if path.type == 'path_not':
+            return
+
         edges = set()
+        CDs = {CG.CD for CG in self.CD if CG.CD != ClockDomain()}
+        for CD in CDs:
+            for node in path:
+                if CD.pattern.match(node):
+                    if CD.type == 'source':
+                        srcs = self.get_global_nodes(node)
+                        for src in srcs.copy():
+                            LUT_name = re.sub('FF2*$', 'LUT', nd.get_bel(src))
+                            if self.LUTs[LUT_name].capacity == 0:
+                                srcs.remove(src)
+
+                        edges.update(set(product({CD.src_sink_node}, srcs)))
+                    if CD.type == 'sink':
+                        edges.update(set(product(self.get_global_nodes(node), {CD.src_sink_node})))
+
+        self.G.add_edges_from(edges)
+
+
+        '''edges = set()
         #clock_domains = [CD for _, CD in self.CD.items() if CD.name != 'None']
         #clock_domains = [CG.CD for CG in self.CD if CG.CD.name != 'None']
         clock_domains = [CG.CD for CG in self.CD if path.get_prev_CD(CG).CD == ClockDomain() and CG.CD != ClockDomain()]
@@ -340,16 +393,7 @@ class MinConfig:
             if CD.type == 'sink':
                 edges.update(set(product(matched_preds_neighs, {CD.src_sink_node})))
 
-        # restore free FFs in front of freed LUTs
-        freed_LUTs = self.filter_LUTs(has_freed=True)
-        for freed_LUT in freed_LUTs:
-            sources = {node for node in self.G.neighbors(cfg.virtual_source_node)
-                       if nd.get_tile(node) == freed_LUT.tile
-                       and nd.get_label(node) == freed_LUT.label
-                       and self.FFs[nd.get_bel(node)].usage == 'free'}
-            edges.update(set(product({cfg.virtual_source_node}, sources)))
-
-        self.G.add_edges_from(edges)
+        self.G.add_edges_from(edges)'''
 
     def add_edges(self, *edges, device=None, weight=None):
         for edge in edges:
@@ -382,7 +426,7 @@ class MinConfig:
         #restored_CGs = [CG for CG in self.CD if path.prev_CD[CG].name == 'None' and path.prev_CD[CG] != self.CD[CG]]
         restored_CGs = [CG for CG in self.CD if path.get_prev_CD(CG).CD == ClockDomain() and path.get_prev_CD(CG).CD != CG.CD]
         for CG in restored_CGs:
-            CG.reset(test_collection)
+            CG.reset(test_collection, path)
 
     def get_clock_domain(self, node: str) -> ClockDomain:
         clock_group = nd.get_clock_group(node)
@@ -393,7 +437,23 @@ class MinConfig:
         CD = next(CG for CG in self.CD if CG.name == clock_group)
 
         return CD
-    ########## Routing ###############
+
+    def test_CD(self):
+        sources = self.G.neighbors(cfg.virtual_source_node)
+        sinks = self.G.predecessors(cfg.virtual_sink_node)
+        source_clock_groups = {nd.get_clock_group(node) for node in sources}
+        sink_clock_groups = {nd.get_clock_group(node) for node in sinks}
+        TC_source_groups = {CG.name for CG in self.CD if CG.CD != ClockDomain() and CG.CD.type == 'source'}
+        TC_sink_groups = {CG.name for CG in self.CD if CG.CD != ClockDomain() and CG.CD.type == 'sink'}
+        TC_unset_groups = {CG.name for CG in self.CD if CG.CD == ClockDomain()}
+        if source_clock_groups - TC_unset_groups - TC_source_groups:
+            raise ValueError(f'invalid source clock group: {source_clock_groups - TC_unset_groups - TC_source_groups}')
+
+        if sink_clock_groups - TC_unset_groups - TC_sink_groups:
+            raise ValueError(f'invalid sink clock group: {sink_clock_groups - TC_unset_groups - TC_sink_groups}')
+
+
+        ########## Routing ###############
     def pick_pip(self, test_collection):
         device = test_collection.device
         pips = test_collection.queue
@@ -416,9 +476,58 @@ class MinConfig:
 
         # create the main_path
         pip = PIP((path_in[-1], path_out[0]), device.G)
+        self.CUTs[-1].G.add_edge(path_in[-1], path_out[0])
         self.CUTs[-1].main_path = MainPath(self, path_in, path_out, pip)
 
         return pip
+
+    def pick_pip2(self, test_collection):
+        cut = test_collection.TC.CUTs[-1]
+        device = test_collection.device
+        pips = test_collection.queue
+        weights = {}
+
+        while (True):
+            path_out = PathOut()
+            path_out.route(self, pips, first_order=True)
+            if path_out.error:
+                return None
+
+            # save weights
+            for edge in path_out.get_edges():
+                if edge not in weights:
+                    weights[edge] = self.G.get_edge_data(*edge)['weight']
+
+            sink = path_out[0]
+            path_in = PathIn(sink)
+            path_in.route(self, pips, path_out)
+            if path_in.error:
+                if len(cut.paths) < (cfg.max_path_length // 4):
+                    self.inc_cost(test_collection, path_out, 0.5, 0.5)
+                    continue
+            else:
+                # remove cfg.pip_v from path[0], so that pip will change in next try
+                self.G.remove_edge(cfg.pip_v, path_out[0])
+
+                #recover weights
+                for edge in weights:
+                    self.G.get_edge_data(*edge)['weight'] = weights[edge]
+
+                return None
+
+            path_in.nodes.pop()
+
+            # create the main_path
+            pip = PIP((path_in[-1], path_out[0]), device.G)
+            self.CUTs[-1].G.add_edge(path_in[-1], path_out[0])
+            self.CUTs[-1].main_path = MainPath(self, path_in, path_out, pip)
+            self.G.remove_edge(cfg.pip_v, path_out[0])
+
+            # recover weights
+            for edge in weights:
+                self.G.get_edge_data(*edge)['weight'] = weights[edge]
+
+            return pip
 
     def validate_main_path_length(self, test_collection):
         device = test_collection.device
@@ -444,6 +553,7 @@ class MinConfig:
             pip = self.pick_pip(test_collection)
             if pip is None:
                 self.remove_CUT(test_collection)
+                #print('no pip')
                 continue
 
             # find the main path
@@ -452,6 +562,7 @@ class MinConfig:
             if main_path.error:
                 # unblock
                 self.remove_CUT(test_collection)
+                #print('no main_path')
                 continue
 
             # validate main_path length
@@ -460,6 +571,7 @@ class MinConfig:
                 desired_pip_weight = 1 / len(main_path)
                 self.inc_cost(test_collection, main_path, desired_pip_weight, default_weight=desired_pip_weight)
                 self.remove_CUT(test_collection)
+                #print('long main_path')
                 continue
 
             path_not = NotPath()
@@ -467,13 +579,14 @@ class MinConfig:
             if path_not.error:
                 # unblock
                 self.remove_CUT(test_collection)
+                #print('no path_not')
                 continue
 
             ###
             self.finalize_CUT(test_collection)
 
 
-    def inc_cost(self, test_collection, main_path: MainPath, desired_pip_weight, default_weight=0.5):
+    def inc_cost(self, test_collection, main_path, desired_pip_weight, default_weight=0.5):
         edges = set()
         device = test_collection.device
         desired_tile = test_collection.desired_tile

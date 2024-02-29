@@ -23,14 +23,17 @@ if __name__ == "__main__":
     #rloc_collection.initialize()
 
     # create and fill configurations
-    Parallel(n_jobs=-1, require='sharedmem')(delayed(rloc_collection.fill_TC)(file) for file in rloc_collection.minimal_configs)
-    #for file in rloc_collection.minimal_configs:
-        #rloc_collection.fill_TC(file)
+    #Parallel(n_jobs=4, require='sharedmem')(delayed(rloc_collection.fill_TC)(file) for file in rloc_collection.minimal_configs)
+    for file in rloc_collection.minimal_configs:
+        rloc_collection.fill_TC(file)
     #with concurrent.futures.ProcessPoolExecutor() as executor:
         #results = [executor.submit(rloc_collection.fill_TC, file) for file in rloc_collection.minimal_configs]
 
-    # store rloc_collection
     try:
-        util.store_data(cfg.Data_path, 'rloc_collection.data', rloc_collection)
+        rloc_collection.pbar.set_postfix_str(rloc_collection.get_coverage())
     except:
-        util.store_data(cfg.Data_path, 'covered_pips.data', rloc_collection.covered_pips)
+        pass
+
+    # store rloc_collection
+    util.store_data(cfg.config_path, 'rloc_collection.data', rloc_collection)
+
