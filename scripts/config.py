@@ -60,6 +60,8 @@ clock_groups = {'W_T': 'W_B', 'W_B': 'W_T', 'E_T': 'E_B', 'E_B': 'E_T'}
 
 ####### PIPs
 pip_v = 'v'
+n_pips_two_CLB = 3424
+n_pips_one_CLB = 2480
 
 ####### Path
 max_path_length = 10
@@ -67,3 +69,16 @@ max_path_length = 10
 ###### TC
 max_capacity = 16
 long_TC_process_time = 60
+
+##### constraints
+name_prefix = 'design_1_i/top_0/U0/Inst/CUTs_Inst/CUT_{}/{}'
+launch_net = 'Q_launch_int'
+route_thru_net = 'Route_Thru'
+launch_FF_cell = 'launch_FF'
+sample_FF_cell = 'sample_FF'
+not_LUT_cell_name = 'not_LUT'
+buff_LUT_cell = 'Buff_Gen.buffer_LUT'
+N_Parallel = 50
+
+##### python
+python = 'python' if platform.system() == 'Windows' else 'python3'
