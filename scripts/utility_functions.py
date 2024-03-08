@@ -42,25 +42,28 @@ def store_data(Path, FileName, data, SubFolder=False, FolderName=None, compress=
 def extend_dict(dict_name, key, value, extend=False, value_type='list'):
     if value_type == 'set':
         if key not in dict_name:
-            if isinstance(value, str) or isinstance(value, tuple) or isinstance(value, Node):
-                dict_name[key] = {value}
-            else:
-                dict_name[key] = set(value)
+            dict_name[key] = {value}
+        elif extend:
+            dict_name[key].update(value)
         else:
-            if isinstance(value, str) or isinstance(value, tuple) or isinstance(value, Node):
-                dict_name[key].add(value)
-            else:
-                dict_name[key].update(value)
+            dict_name[key].add(value)
+
+    elif value_type == 'list':
+        if key not in dict_name:
+            dict_name[key] = [value]
+        elif extend:
+            dict_name[key].extend(value)
+        else:
+            dict_name[key].append(value)
+
     else:
-        if extend:
-            if key not in dict_name:
-                dict_name[key] = [value]
-            else:
-                dict_name[key].extend(value)
-        else:
-            if key not in dict_name:
-                dict_name[key] = [value]
-            else:
-                dict_name[key].append(value)
+        raise ValueError(f'Unsupported value type: {value_type}')
 
     return dict_name
+
+def safe_call(func, *args, **kwargs):
+    try:
+        func(*args, **kwargs)
+        return True
+    except:
+        return False
