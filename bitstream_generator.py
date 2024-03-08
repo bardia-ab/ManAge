@@ -27,6 +27,6 @@ if __name__ == '__main__':
         start_index, N_TCs = 0, len(os.listdir(CR_dir))
         tcl_path = os.path.join('tcl', 'generate_bitstream.tcl')
 
-        command = f'''vivado -mode batch -nolog -nojournal -source {tcl_path} -tclargs "{CR_dir}" "{cfg.vivado_project_path}" "{cfg.Data_path}" "{cr}" "{start_index}" "{N_TCs}" "{cfg.N_Parallel}" "None"'''
+        command = 'vivado -mode batch -nolog -nojournal -source {} -tclargs "{}" "{}" "{}" "{}" "{}" "{}" "{}" "{}"'
+        command.format(tcl_path, CR_dir, cfg.vivado_project_path, cfg.Data_path, cr, start_index, N_TCs, cfg.N_Parallel, 'None')
         os.system(command)
-        break
