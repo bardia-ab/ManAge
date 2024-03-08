@@ -1,10 +1,10 @@
-import time
+import time, sys
 from arch.arch_model import DeviceModel
 from scripts.utility_functions import store_data
 import scripts.config as cfg
 
 start_time = time.time()
-viv_rpt_path = r"C:\Users\t26607bb\Desktop\Architecture Graph\zu3eg.tar\fpga_report.viv_rpt"
+viv_rpt_path = sys.argv[1]
 device = DeviceModel()
 device.parse(viv_rpt_path)
 
