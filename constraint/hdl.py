@@ -150,14 +150,3 @@ class VHDL:
         codes.append('\nend architecture;')
 
         return codes
-
-if __name__ == '__main__':
-    import os
-    os.chdir(os.path.abspath('..'))
-    import scripts.utility_functions as util
-    import scripts.config as cfg
-
-    device = util.load_data(cfg.load_path, f'device_xczu9eg.data')
-    rloc_collection = util.load_data('/home/bardia/Desktop/bardia/ManAge_Data/Data_xczu9eg/Configurations/iter1', 'rloc_collection.data')
-    TC = util.load_data('/home/bardia/Desktop/bardia/ManAge_Data/Data_xczu9eg/Configurations/iter1', 'TC203.data')
-    print('hi')

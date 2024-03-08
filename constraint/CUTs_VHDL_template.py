@@ -20,7 +20,7 @@ def get_VHDL_file():
     VHDL_file.add_port('i_CLR', 'in', 'std_logic')
     VHDL_file.add_port('o_Error', 'out', 'my_array')
     VHDL_file.add_signal('w_Error', 'my_array(0 to g_N_Segments - 1)(g_N_Parallel - 1 downto 0)',
-                         "(others => (others => '0'))")
+                         "(others => (others => '1'))")
     VHDL_file.add_assignment('o_Error', 'w_Error')
 
     return VHDL_file
