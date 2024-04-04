@@ -4,8 +4,8 @@ from tqdm import tqdm
 from xil_res.architecture import Arch
 from relocation.configuration import Config
 from xil_res.node import Node as nd
-import scripts.utility_functions as util
-import scripts.config as cfg
+import utility.utility_functions as util
+import utility.config as cfg
 
 
 @dataclass

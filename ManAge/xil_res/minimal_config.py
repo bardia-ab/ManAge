@@ -2,10 +2,10 @@ import copy, time, sys
 import re
 from itertools import product
 import networkx as nx
-#sys.path.insert(0, r'..\scripts')
-import scripts.config as cfg
-import scripts.utility_functions as util
-from experiment.clock_domain import ClockGroup, ClockDomain
+#sys.path.insert(0, r'..\utility')
+import utility.config as cfg
+import utility.utility_functions as util
+from xil_res.clock_domain import ClockGroup, ClockDomain
 from xil_res.node import Node as nd
 from xil_res.edge import Edge
 from xil_res.architecture import Arch
@@ -482,7 +482,7 @@ class MinConfig:
         return pip
 
     def pick_pip2(self, test_collection):
-        cut = test_collection.TC.CUTs[-1]
+        cut = test_collection.TC_dict.CUTs[-1]
         device = test_collection.device
         pips = test_collection.queue
         weights = {}

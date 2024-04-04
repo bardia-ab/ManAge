@@ -29,3 +29,29 @@ class CUT:
     def get_covered_pips(self):
         tile = f'INT_{self.origin}'
         return set(filter(lambda edge: nd.get_tile(edge[0]) == tile, self.main_path.get_pips()))
+
+
+    def fill_CUT_from_flattened_dict(self, device, TC, RLOC_G, origin):
+        # Graph
+        for edge in RLOC_G.edges:
+            D_u = nd.get_DLOC_node(device.tiles_map, edge[0], origin)
+            D_v = nd.get_DLOC_node(device.tiles_map, edge[1], origin)
+            self.G.add_edge(D_u, D_v)
+
+        # FFs
+        for ff_node in (node for node in self.G if nd.get_primitive(node) == 'FF'):
+            FF_primitive = TC.FFs[nd.get_bel(ff_node)]
+            FF_primitive.set_usage(ff_node)
+            self.FFs.add(FF_primitive)
+
+        # subLUTs
+        for LUT_in in filter(lambda x: nd.get_primitive(x) == 'LUT', self.G):
+            LUT_in_type = 'end_node' if self.G.out_degree(LUT_in) == 0 else 'mid_node'
+            LUT_output = None if LUT_in_type == 'end_node' else next(self.G.neighbors(LUT_in))
+            LUT_func = 'buffer' if LUT_in_type == 'mid_node' else 'not'
+
+            sublut_name = f'{nd.get_tile(LUT_in)}/{nd.get_label(LUT_in)}{TC.get_subLUT_bel(LUT_output, LUT_in)}'
+            subLUT = TC.subLUTs[sublut_name]
+            subLUT.fill(LUT_output, LUT_func, LUT_in)
+            subLUT.add_to_LUT(TC)
+            self.subLUTs.add(subLUT)

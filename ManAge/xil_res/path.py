@@ -7,10 +7,10 @@ import networkx as nx
 from typing import List, Set, Tuple
 from xil_res.node import Node as nd
 from xil_res.edge import PIP, Edge
-from experiment.clock_domain import ClockGroup
+from xil_res.clock_domain import ClockGroup
 from xil_res.primitive import SubLUT, FF
-#sys.path.insert(0, r'..\scripts')
-import scripts.config as cfg
+#sys.path.insert(0, r'..\utility')
+import utility.config as cfg
 
 class Path:
 
@@ -448,7 +448,7 @@ class MainPath(Path):
 
 
     def route(self, test_collection):
-        TC = test_collection.TC
+        TC = test_collection.TC_dict
         pips = test_collection.queue
         self.prev_CD = copy.deepcopy(TC.CD)
         paths = self.sort_paths()
@@ -491,7 +491,7 @@ class NotPath(Path):
 
     def get_blocked_nodes(self, test_collection):
         device = test_collection.device
-        TC = test_collection.TC
+        TC = test_collection.TC_dict
         cut = TC.CUTs[-1]
 
         # Not path mustn't have route-thrus
@@ -506,7 +506,7 @@ class NotPath(Path):
 
     def route(self, test_collection):
         device = test_collection.device
-        TC = test_collection.TC
+        TC = test_collection.TC_dict
         cut = TC.CUTs[-1]
         self.prev_CD = copy.deepcopy(TC.CD)
         self.assign_virtual_source_sink(TC.G, cut.main_path)

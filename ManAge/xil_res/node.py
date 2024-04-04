@@ -1,8 +1,8 @@
 import re, sys, os
 from typing import Set
-#sys.path.insert(0, r'..\scripts')
+#sys.path.insert(0, r'..\utility')
 import networkx as nx
-import scripts.config as cfg
+import utility.config as cfg
 
 class Node:
 

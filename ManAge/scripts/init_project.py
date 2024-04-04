@@ -1,5 +1,8 @@
-import utility_functions as util
-import config as cfg
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent))
+import utility.utility_functions as util
+import utility.config as cfg
 
 util.create_folder(cfg.Data_path)
 util.create_folder(cfg.minimal_config_path)

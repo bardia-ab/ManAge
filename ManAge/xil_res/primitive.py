@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 import networkx as nx
 
 from xil_res.node import Node as nd
-import scripts.config as cfg
+import utility.config as cfg
 
 class Primitive(ABC):
 

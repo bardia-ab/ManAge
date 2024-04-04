@@ -1,6 +1,6 @@
 import os
-import scripts.config as cfg
-import scripts.utility_functions as util
+import utility.config as cfg
+import utility.utility_functions as util
 
 pips_mode = 'local'
 device_name = 'xczu9eg'

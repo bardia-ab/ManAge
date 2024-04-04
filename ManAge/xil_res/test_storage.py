@@ -6,9 +6,9 @@ from typing import List, Set
 from tqdm import tqdm
 from xil_res.architecture import Arch
 from xil_res.minimal_config import MinConfig
-from experiment.clock_domain import ClockDomain, ClockGroup
-import scripts.config as cfg
-import scripts.utility_functions as util
+from xil_res.clock_domain import ClockDomain, ClockGroup
+import utility.config as cfg
+import utility.utility_functions as util
 
 @dataclass
 class TestCollection:

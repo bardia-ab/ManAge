@@ -1,11 +1,11 @@
 import copy
 import sys, time
 import networkx as nx
-#sys.path.insert(0, r'..\scripts')
+#sys.path.insert(0, r'..\utility')
 from typing import Set, Tuple
 from itertools import product
-import scripts.utility_functions as util
-import scripts.config as cfg
+import utility.utility_functions as util
+import utility.config as cfg
 from xil_res.node import Node as nd
 from xil_res.clock_region import CR
 from xil_res.router import path_finder, weight_function

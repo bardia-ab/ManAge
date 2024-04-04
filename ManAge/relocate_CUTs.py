@@ -1,6 +1,6 @@
 import os, sys
-import scripts.config as cfg
-import scripts.utility_functions as util
+import utility.config as cfg
+import utility.utility_functions as util
 from xil_res.architecture import Arch
 from relocation.relocation_storage import RLOC_Collection
 

@@ -2,8 +2,8 @@ import re, sys
 from heapq import heappush, heappop
 from itertools import count
 import networkx as nx
-sys.path.insert(0, r'..\scripts')
-import scripts.config as cfg
+sys.path.insert(0, r'../utility')
+import utility.config as cfg
 
 
 def path_finder(G, source, target, weight="weight", conflict_free=True, delimiter='/', dummy_nodes=[], blocked_nodes=set()):

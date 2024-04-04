@@ -3,7 +3,7 @@ import sys
 from xil_res.architecture import Arch
 import processing.plot as plot
 import arch.analysis as an
-import scripts.config as cfg
+import utility.config as cfg
 
 # initialize device
 device_name = sys.argv[1]

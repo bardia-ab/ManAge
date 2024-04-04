@@ -3,8 +3,8 @@ import os, re
 from dataclasses import dataclass, field
 from typing import List, Set, Any
 from joblib import Parallel, delayed
-import scripts.utility_functions as util
-import scripts.config as cfg
+import utility.utility_functions as util
+import utility.config as cfg
 from xil_res.node import Node as nd
 from xil_res.cut import CUT
 from relocation.rloc import RLOC as rl
@@ -129,11 +129,12 @@ class Config:
         return all(map(lambda ff: ff.name not in self.FFs, cut.FFs))
 
     def fill_D_CUTs(self, rloc_collection, minimal_TC):
+        tiles_map = rloc_collection.device.tiles_map
         CUTs = minimal_TC.CUTs
 
         # first add CUTs
         for cut in CUTs:
-            d_cut = D_CUT(cut.origin, rloc_collection, cut)
+            d_cut = D_CUT(cut.origin, tiles_map, cut, iteration=rloc_collection.iteration)
             self.add_D_CUT(rloc_collection, d_cut)
 
         # set CD
@@ -148,11 +149,12 @@ class Config:
                     self.add_D_CUT(rloc_collection, d_cut)
 
     def get_valid_D_CUTs(self, rloc_collection, cut: CUT):
+        tiles_map = rloc_collection.device.tiles_map
         valid_coords = self.get_valid_origins(rloc_collection, cut)
         #with concurrent.futures.ThreadPoolExecutor() as executor:
             #D_CUTs = list(executor.map(partial(D_CUT, rloc_collection=rloc_collection, cut=cut), valid_coords))
 
-        D_CUTs = (D_CUT(origin, rloc_collection, cut) for origin in valid_coords)
+        D_CUTs = (D_CUT(origin, tiles_map, cut, iteration=rloc_collection.iteration) for origin in valid_coords)
 
         return D_CUTs
 

@@ -2,8 +2,8 @@ from dataclasses import dataclass, field
 from math import ceil
 import os
 from typing import List, Set, Any
-import scripts.utility_functions as util
-import scripts.config as cfg
+import utility.utility_functions as util
+import utility.config as cfg
 from relocation.cut import D_CUT
 from constraint.cell import Cell
 from constraint.net import Net

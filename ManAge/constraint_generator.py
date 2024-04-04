@@ -3,8 +3,8 @@ from xil_res.architecture import Arch
 from constraint.configuration import ConstConfig
 import constraint.CUTs_VHDL_template  as tmpl
 from constraint.net import Net
-import scripts.config as cfg
-import scripts.utility_functions as util
+import utility.config as cfg
+import utility.utility_functions as util
 
 if __name__ == '__main__':
     # user input

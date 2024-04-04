@@ -1,6 +1,6 @@
 import os, re, sys
-import scripts.utility_functions as util
-import scripts.config as cfg
+import utility.utility_functions as util
+import utility.config as cfg
 
 if __name__ == '__main__':
     # create required directories

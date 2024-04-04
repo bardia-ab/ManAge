@@ -1,7 +1,7 @@
 #from xil_res.architecture import Arch
 #import os
 #os.chdir(os.path.abspath('..'))
-import scripts.utility_functions as util
+import utility.utility_functions as util
 from xil_res.node import Node as nd
 
 def parse_tiles_map(tiles_map):

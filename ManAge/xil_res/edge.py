@@ -2,7 +2,7 @@ import re
 import networkx as nx
 from typing import Tuple
 from xil_res.node import Node as nd
-import scripts.config as cfg
+import utility.config as cfg
 
 
 class Edge:

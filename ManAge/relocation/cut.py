@@ -4,17 +4,17 @@ from xil_res.cut import CUT
 from xil_res.node import Node as nd
 from xil_res.primitive import FF, SubLUT
 from xil_res.path import Path
-import scripts.config as cfg
+import utility.config as cfg
 
 class D_CUT(CUT):
     __slots__ = ('origin', 'index', 'main_path', 'paths', 'FFs', 'subLUTs', 'G', 'nodes_dict')
-    def __init__(self, origin: str, rloc_collection, cut: CUT):
-        index = (rloc_collection.iteration - 1) * cfg.max_capacity + cut.index
+    def __init__(self, origin: str, tiles_map, cut: CUT, iteration=None, index=None):
+        index = (iteration - 1) * cfg.max_capacity + cut.index if (iteration is not None) else index
         super().__init__(origin, index)
         del self.paths
-        self.nodes_dict = self.get_nodes_dict(rloc_collection, cut)
-        self.FFs        = self.get_relocated_FFs(rloc_collection, cut)
-        self.subLUTs    = self.get_relocated_subLUTs(rloc_collection, cut)
+        self.nodes_dict = self.get_nodes_dict(tiles_map, cut)
+        self.FFs        = self.get_relocated_FFs(tiles_map, cut)
+        self.subLUTs    = self.get_relocated_subLUTs(tiles_map, cut)
         self.set_graph(cut)
         self.set_main_path()
 
@@ -27,17 +27,17 @@ class D_CUT(CUT):
     def get_y_coord(self):
         return nd.get_y_coord(self.origin)
 
-    def get_nodes_dict(self, rloc_collection, cut):
-        tiles_map = rloc_collection.device.tiles_map
+    def get_nodes_dict(self, tiles_map, cut):
+        tiles_map = tiles_map
         nodes_dict = {node: nd.dislocate_node(tiles_map, node, self.origin, origin=cut.origin) for node in cut.G}
         if None in nodes_dict.values():
             raise ValueError(f'{next(k for k,v in nodes_dict.items() if v is None)}: invalid node in D_CUT!')
 
         return nodes_dict
 
-    def get_relocated_FFs(self, rloc_collection, cut):
+    def get_relocated_FFs(self, tiles_map, cut):
         #TC = rloc_collection.TC
-        tiles_map = rloc_collection.device.tiles_map
+        tiles_map = tiles_map
         FFs = set()
         for FF_primitive in cut.FFs:
             FF_node = FF_primitive.node
@@ -48,9 +48,9 @@ class D_CUT(CUT):
 
         return FFs
 
-    def get_relocated_subLUTs(self, rloc_collection, cut):
+    def get_relocated_subLUTs(self, tiles_map, cut):
         #TC = rloc_collection.TC
-        tiles_map = rloc_collection.device.tiles_map
+        tiles_map = tiles_map
         subLUTs = set()
         for subLUT in cut.subLUTs:
             D_LUT_input = next(self.nodes_dict[LUT_input] for LUT_input in subLUT.inputs if LUT_input in self.nodes_dict)

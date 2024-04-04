@@ -1,10 +1,10 @@
 import os.path
 import sys, time, cProfile
-from experiment.test_storage import TestCollection
+from xil_res.test_storage import TestCollection
 from xil_res.architecture import Arch
 from xil_res.path import PathOut, PathIn
-import scripts.config as cfg
-import scripts.utility_functions as util
+import utility.config as cfg
+import utility.utility_functions as util
 
 
 if __name__ == "__main__":
