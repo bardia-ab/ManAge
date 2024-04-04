@@ -1,4 +1,5 @@
 import re
+from itertools import product
 from abc import ABC, abstractmethod
 
 import networkx as nx
@@ -98,7 +99,7 @@ class SubLUT(Primitive):
         self._inputs = set()
         self.output = None
         self.func   = None
-        self.bel    = None
+        self.bel    = self.port if self.name[-4] in {chr(53), chr(54)} else None
 
     def __repr__(self):
         if self.bel is None:
@@ -242,3 +243,32 @@ class LUT(Primitive):
         self.capacity += subLUT.get_occupancy()
         if not self.subLUTs:
             self.usage = 'free'
+
+    def get_init(self):
+        init = 64 * ['0']
+        self.subLUTs.sort(key=lambda x: x.name, reverse=True)
+
+        for sublut in self.subLUTs:
+            N_inputs = int(sublut.port[1])
+            entries = self.get_truth_table(N_inputs)
+            input_idx = nd.get_bel_index(list(sublut.inputs)[0]) - 1
+
+            if sublut.func == 'not':
+                init_list = [str(int(not (entry[input_idx]))) for entry in entries]
+            elif sublut.func == 'buffer':
+                init_list = [str(entry[input_idx]) for entry in entries]
+            else:
+                init_list = [str(0) for _ in entries]
+
+            init[: 2 ** N_inputs] = init_list
+
+        init.reverse()
+        init = ''.join(init)
+        init = format(int(init, base=2), '016X')
+
+        return init
+
+    @staticmethod
+    def get_truth_table(n_entry):
+        truth_table = list(product((0, 1), repeat=n_entry))
+        return [entry[::-1] for entry in truth_table]

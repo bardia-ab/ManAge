@@ -4,7 +4,7 @@ from xil_res.path import Path
 
 class CUT:
     __slots__ = ('origin', 'index', 'main_path', 'paths', 'FFs', 'subLUTs', 'G')
-    def __init__(self, origin, cut_index):
+    def __init__(self, origin=None, cut_index=None):
         self.origin     = origin
         self.index      = cut_index
         self.main_path  = Path()
@@ -39,12 +39,20 @@ class CUT:
             self.G.add_edge(D_u, D_v)
 
         # FFs
-        for ff_node in (node for node in self.G if nd.get_primitive(node) == 'FF'):
-            FF_primitive = TC.FFs[nd.get_bel(ff_node)]
-            FF_primitive.set_usage(ff_node)
-            self.FFs.add(FF_primitive)
+        self.create_CUT_FFs(TC)
 
         # subLUTs
+        self.create_CUT_subLUTs(TC)
+
+    def create_CUT_G_from_paths(self, *paths):
+        for path in paths:
+            edges = zip(path, path[1:])
+            self.G.add_edges_from(edges)
+
+    def create_CUT_G_from_edges(self, *edges):
+        self.G.add_edges_from(edges)
+
+    def create_CUT_subLUTs(self, TC):
         for LUT_in in filter(lambda x: nd.get_primitive(x) == 'LUT', self.G):
             LUT_in_type = 'end_node' if self.G.out_degree(LUT_in) == 0 else 'mid_node'
             LUT_output = None if LUT_in_type == 'end_node' else next(self.G.neighbors(LUT_in))
@@ -55,3 +63,39 @@ class CUT:
             subLUT.fill(LUT_output, LUT_func, LUT_in)
             subLUT.add_to_LUT(TC)
             self.subLUTs.add(subLUT)
+
+    def create_CUT_FFs(self, TC):
+        for ff_node in (node for node in self.G if nd.get_primitive(node) == 'FF'):
+            FF_primitive = TC.FFs[nd.get_bel(ff_node)]
+            FF_primitive.set_usage(ff_node)
+            self.FFs.add(FF_primitive)
+
+    @staticmethod
+    def conv_paths2CUT(TC, index, *paths):
+        cut = CUT(cut_index=index)
+
+        # create graph
+        cut.create_CUT_G_from_paths(*paths)
+
+        # create FFs
+        cut.create_CUT_FFs(TC)
+
+        # create subLUTs
+        cut.create_CUT_subLUTs(TC)
+
+        return cut
+
+    @staticmethod
+    def conv_graph2CUT(TC, index, *edges):
+        cut = CUT(cut_index=index)
+
+        # create graph
+        cut.create_CUT_G_from_edges(*edges)
+
+        # create FFs
+        cut.create_CUT_FFs(TC)
+
+        # create subLUTs
+        cut.create_CUT_subLUTs(TC)
+
+        return cut

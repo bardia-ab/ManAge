@@ -1,7 +1,8 @@
-import yaml, platform, os, re
+import yaml, platform, os, re, sys
 from pathlib import Path
-if Path(os.getcwd()).parts[-1] == 'utility':
-    os.chdir(os.path.abspath('..'))
+if not (Path(os.getcwd()).parts[-1] == Path(os.getcwd()).parts[-2] == 'ManAge'):
+    sys.path.append(str(Path(__file__).parent.parent))
+    os.chdir(str(Path(__file__).parent.parent))
 
 with open('config.yaml', 'r') as file:
     config = yaml.safe_load(file)

@@ -19,7 +19,7 @@ class Config:
     used_nodes  :   dict    = field(default_factory = dict)
     D_CUTs      :   List    = field(default_factory = list)
     CD          :   dict    = field(default_factory = dict)
-    #subLUTs     :   dict     = field(default_factory = dict)
+    subLUTs     :   dict     = field(default_factory = dict)
     LUTs        :   dict     = field(default_factory = dict)
     FFs         :   dict     = field(default_factory = dict)
 
@@ -42,23 +42,48 @@ class Config:
         self.__dict__.update(state)'''
 
 
-    '''def filter_LUTs(self, **attributes):
+    def filter_LUTs(self, **attributes):
         return (LUT_obj for LUT_obj in self.LUTs.values() if all(getattr(LUT_obj, attr) == value for attr, value in attributes.items()))
 
     def filter_subLUTs(self, **attributes):
         return (subLUT_obj for subLUT_obj in self.subLUTs.values() if all(getattr(subLUT_obj, attr) == value for attr, value in attributes.items()))
 
     def filter_FFs(self, **attributes):
-        return (FF_obj for FF_obj in self.FFs.values() if all(getattr(FF_obj, attr) == value for attr, value in attributes.items()))'''
+        return (FF_obj for FF_obj in self.FFs.values() if all(getattr(FF_obj, attr) == value for attr, value in attributes.items()))
 
-    '''def create_LUTs(self, device):
+    @staticmethod
+    def create_LUTs(device):
         return {lut.name: lut for lut in device.get_LUTs()}
 
-    def create_FFs(self, device):
+    @staticmethod
+    def create_FFs(device):
         return {ff.name: ff for ff in device.get_FFs()}
 
-    def create_subLUTs(self, device):
-        return {sublut.name: sublut for sublut in device.get_subLUTs()}'''
+    @staticmethod
+    def create_subLUTs(device):
+        return {sublut.name: sublut for sublut in device.get_subLUTs()}
+
+    def get_subLUT_bel(self, output, *inputs):
+        occupancy = self.get_subLUT_occupancy(output, *inputs)
+        #LUT_primitive = next(self.filter_LUTs(name=nd.get_bel(inputs[0])))
+        LUT_primitive = self.LUTs[nd.get_bel(inputs[0])]
+        if occupancy == 2:
+            bel = '6LUT'
+        else:
+            if LUT_primitive.capacity == 1:
+                bel = '6LUT' if LUT_primitive.subLUTs[-1].port[1:] == '5LUT' else '5LUT'
+            else:
+                bel = '5LUT'
+
+        return bel
+
+    def get_subLUT_occupancy(self, output, *inputs):
+        cond_single_mode = not cfg.LUT_Dual
+        cond_i6 = any(map(lambda x: nd.get_bel_index(x) == 6, inputs))
+        cond_muxed_out = (output is not None) and (nd.get_clb_node_type(output) == 'CLB_muxed')
+        occupancy = 2 if (cond_single_mode or cond_i6 or cond_muxed_out) else 1
+
+        return occupancy
 
     '''def get_global_subLUTs(self, *subLUTs):
         global_subLUTs = set()

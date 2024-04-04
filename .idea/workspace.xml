@@ -5,37 +5,13 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="8ee68646-0de3-42b6-89ad-e460acd658ca" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/ManAge/experiment/clock_manager.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ManAge/experiment/read_packet.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ManAge/format_flattened_paths.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ManAge/processing/data_process.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ManAge/scripts/run_experiments.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ManAge/arch/analysis.py" beforeDir="false" afterPath="$PROJECT_DIR$/ManAge/arch/analysis.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ManAge/arch_graph_parser.py" beforeDir="false" afterPath="$PROJECT_DIR$/ManAge/arch_graph_parser.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ManAge/arch_model_generator.py" beforeDir="false" afterPath="$PROJECT_DIR$/ManAge/arch_model_generator.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ManAge/bitstream_generator.py" beforeDir="false" afterPath="$PROJECT_DIR$/ManAge/bitstream_generator.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ManAge/constraint/configuration.py" beforeDir="false" afterPath="$PROJECT_DIR$/ManAge/constraint/configuration.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ManAge/constraint/net.py" beforeDir="false" afterPath="$PROJECT_DIR$/ManAge/constraint/net.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ManAge/constraint_generator.py" beforeDir="false" afterPath="$PROJECT_DIR$/ManAge/constraint_generator.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ManAge/experiment/clock_domain.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ManAge/experiment/test_storage.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ManAge/path_finder.py" beforeDir="false" afterPath="$PROJECT_DIR$/ManAge/path_finder.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ManAge/path_finder_wrapper.py" beforeDir="false" afterPath="$PROJECT_DIR$/ManAge/path_finder_wrapper.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ManAge/relocate_CUTs.py" beforeDir="false" afterPath="$PROJECT_DIR$/ManAge/relocate_CUTs.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ManAge/constraint/FASM.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ManAge/scripts/build_TC.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ManAge/relocation/configuration.py" beforeDir="false" afterPath="$PROJECT_DIR$/ManAge/relocation/configuration.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ManAge/relocation/cut.py" beforeDir="false" afterPath="$PROJECT_DIR$/ManAge/relocation/cut.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ManAge/relocation/relocation_storage.py" beforeDir="false" afterPath="$PROJECT_DIR$/ManAge/relocation/relocation_storage.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ManAge/scripts/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/ManAge/utility/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ManAge/scripts/init_project.py" beforeDir="false" afterPath="$PROJECT_DIR$/ManAge/scripts/init_project.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ManAge/scripts/utility_functions.py" beforeDir="false" afterPath="$PROJECT_DIR$/ManAge/utility/utility_functions.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ManAge/xil_res/architecture.py" beforeDir="false" afterPath="$PROJECT_DIR$/ManAge/xil_res/architecture.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ManAge/utility/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/ManAge/utility/config.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ManAge/xil_res/cut.py" beforeDir="false" afterPath="$PROJECT_DIR$/ManAge/xil_res/cut.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ManAge/xil_res/edge.py" beforeDir="false" afterPath="$PROJECT_DIR$/ManAge/xil_res/edge.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ManAge/xil_res/minimal_config.py" beforeDir="false" afterPath="$PROJECT_DIR$/ManAge/xil_res/minimal_config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ManAge/xil_res/node.py" beforeDir="false" afterPath="$PROJECT_DIR$/ManAge/xil_res/node.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ManAge/xil_res/path.py" beforeDir="false" afterPath="$PROJECT_DIR$/ManAge/xil_res/path.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ManAge/xil_res/primitive.py" beforeDir="false" afterPath="$PROJECT_DIR$/ManAge/xil_res/primitive.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ManAge/xil_res/router.py" beforeDir="false" afterPath="$PROJECT_DIR$/ManAge/xil_res/router.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -65,7 +41,9 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
+    "Python.FASM.executor": "Debug",
     "Python.architecture.executor": "Debug",
+    "Python.build_TC.executor": "Debug",
     "Python.constraint_generator.executor": "Debug",
     "Python.format_flattened_paths.executor": "Debug",
     "Python.hdl.executor": "Debug",
@@ -88,8 +66,8 @@
       <recent name="$PROJECT_DIR$/ManAge/xil_res" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.path_finder_wrapper (1)">
-    <configuration name="constraint_generator" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+  <component name="RunManager" selected="Python.build_TC">
+    <configuration name="FASM" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="ManAge" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -98,11 +76,33 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/ManAge/constraint" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/constraint_generator.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/ManAge/constraint/FASM.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="build_TC" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="ManAge" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/ManAge/scripts" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/ManAge/scripts/build_TC.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -125,28 +125,6 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/ManAge/format_flattened_paths.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
-    <configuration name="hdl" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="ManAge" />
-      <option name="ENV_FILES" value="" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/constraint" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/constraint/hdl.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -201,11 +179,11 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.build_TC" />
+        <item itemvalue="Python.FASM" />
         <item itemvalue="Python.path_finder_wrapper (1)" />
         <item itemvalue="Python.format_flattened_paths" />
         <item itemvalue="Python.run_experiments2" />
-        <item itemvalue="Python.constraint_generator" />
-        <item itemvalue="Python.hdl" />
       </list>
     </recent_temporary>
   </component>
@@ -264,6 +242,16 @@
           <url>file://$PROJECT_DIR$/ManAge/format_flattened_paths.py</url>
           <line>48</line>
           <option name="timeStamp" value="39" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/ManAge/constraint/FASM.py</url>
+          <line>104</line>
+          <option name="timeStamp" value="40" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/ManAge/scripts/build_TC.py</url>
+          <line>31</line>
+          <option name="timeStamp" value="49" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
