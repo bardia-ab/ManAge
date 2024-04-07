@@ -1,5 +1,24 @@
+import re
 from itertools import product
+from pathlib import Path
+
+import networkx as nx
+
 from xil_res.node import Node as nd
+
+def read_FASM(fasm_fie):
+    fasm_list = []
+    with open(fasm_fie) as file:
+        for line in file.readlines():
+            if line == '\n':
+                continue
+
+            fasm_list.append(line.rstrip('\n'))
+
+    return fasm_list
+
+def extract_pip_entries(fasm_list):
+    return list(filter(lambda x: '.PIP.' in x, fasm_list))
 
 def get_pips_FASM(*pips, mode=None):
     value = {'set': 1, 'clear': 0, None:'{}'}
@@ -24,9 +43,35 @@ def get_LUTs_FASM(LUTs, mode=None):
         # OUTMUX
         for sublut in LUT.subLUTs:
             if nd.get_clb_node_type(sublut.output) == 'CLB_muxed':
-                FASM_list.add(get_OUTMUX_FASM(tile, label, sublut.port[1], value[mode]))
+                sublut_index = '6' if len(LUT.subLUTs) == '1' else sublut.port[1]
+                FASM_list.add(get_OUTMUX_FASM(tile, label, sublut_index, value[mode]))
 
     return FASM_list
+
+def convert_FASM_pip(pip_entry):
+    if '=' in pip_entry:
+        pip_entry = pip_entry.strip().split('=')[0]
+
+    fields = pip_entry.split('.')
+    fields.pop(1)
+    INT_tile, port_v, port_u = fields[0:3]
+    pip_u = f'{INT_tile}/{port_u}'
+    pip_v = f'{INT_tile}/{port_v}'
+
+    if len(fields) == 3:
+        pip = (pip_u, pip_v)
+
+    elif len(fields) == 4:
+        if (fields[3] == 'FWD'):
+            pip = (pip_u, pip_v)
+        elif (fields[3] == 'REV'):
+            pip = (pip_v, pip_u)
+        else:
+            raise ValueError(f'Invalid bidir PIP: {fields[3]} -> {pip_entry}')
+    else:
+        raise ValueError(f'Invalid number of fields: {fields}')
+
+    return pip
 
 def get_pip_setting(pip, suffix='', value='{}'):
     if nd.get_tile(pip[0]) != nd.get_tile(pip[1]):
@@ -99,7 +144,32 @@ def get_truth_table(n_entry):
 
 
 if __name__ == '__main__':
+    from xil_res.architecture import Arch
+    from xil_res.node import Node as nd
+    from bidict import bidict
+    device = Arch('xczu9eg')
+    fasm_file = Path('/home/bardia/Downloads/oscillator_floodv2_unit_X2Y1_9eg') / 'oscillator_floodv2_unit_X2Y1_9eg_1clb.fasm'
+    fasm_list = read_FASM(str(fasm_file))
+    pip_entries = extract_pip_entries(fasm_list)
+    pips = {convert_FASM_pip(pip_entry) for pip_entry in pip_entries}
+    G = nx.DiGraph()
+    G.add_edges_from(pips)
 
-    entry = get_truth_table(6)
-    init = cal_init(5, 'not', 6)
+    # wire dict
+    used_tiles = {nd.get_tile(node) for pip in pips for node in pip}
+    wires_dict_light = {k: v for k, v in device.wires_dict.items() if k in used_tiles}
+    wires_dict = bidict({k: v for key, value in wires_dict_light.items() for (k, v) in value})
+
+    # find ROs
+    clb_out_neighs = list(filter(lambda x: re.match('.*LOGIC_OUTS.*', x), G))
+    LUT_ins = list(filter(lambda x: re.match('.*/IMUX.*', x) and nd.is_i6(wires_dict[x]), G))
+    sources = product({'s'}, clb_out_neighs)
+    sinks = product(LUT_ins, {'t'})
+    G.add_edges_from(sources)
+    G.add_edges_from(sinks)
+    RO_paths = list(nx.all_simple_paths(G, 's', 't'))
+    shorts = list(filter(lambda x: G.in_degree(x) > 1,G))
+    print(shorts)
+
+
     print('hi')

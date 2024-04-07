@@ -71,8 +71,8 @@ class CUT:
             self.FFs.add(FF_primitive)
 
     @staticmethod
-    def conv_paths2CUT(TC, index, *paths):
-        cut = CUT(cut_index=index)
+    def conv_paths2CUT(TC, index, origin, *paths):
+        cut = CUT(cut_index=index, origin=origin)
 
         # create graph
         cut.create_CUT_G_from_paths(*paths)
@@ -86,8 +86,8 @@ class CUT:
         return cut
 
     @staticmethod
-    def conv_graph2CUT(TC, index, *edges):
-        cut = CUT(cut_index=index)
+    def conv_graph2CUT(TC, index, origin, *edges):
+        cut = CUT(cut_index=index, origin=origin)
 
         # create graph
         cut.create_CUT_G_from_edges(*edges)

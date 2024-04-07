@@ -8,7 +8,8 @@ import utility.utility_functions as util
 
 if __name__ == '__main__':
     # user input
-    device_name = sys.argv[1]
+#    device_name = sys.argv[1]
+    device_name = 'xczu9eg'
 
     # create the vivado sources folder
     util.create_folder(cfg.vivado_res_path)
@@ -28,7 +29,7 @@ if __name__ == '__main__':
 
         for file in configuration_files:
 
-            # load cong=figuration
+            # load configuration
             TC_idx = file.split('.')[0]
             TC = util.load_data(config_path, file)
             CUTs = filter(lambda x: x.origin in clock_region.tiles, TC.D_CUTs)

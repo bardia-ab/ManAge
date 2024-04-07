@@ -5,7 +5,7 @@ Windows:
 
 Linux:
   arch_graph_path     : /home/bardia/Desktop/bardia/Architecture Graph/ZCU9EG
-  Data_path           : /home/bardia/Desktop/bardia/ManAge_Data/Data_xczu9eg
+  Data_path           : /home/bardia/Desktop/bardia/ManAge_Data/Data_xczu9eg_PV
   vivado_project_path :
 
 General:
