@@ -6,12 +6,14 @@ from experiment.read_packet import Read
 from processing.data_process import get_segments_delays, validate_result, log_results, log_error
 import utility.utility_functions as util
 
+#usage: python3 run_experiment.py N_Parallel COM_port baud_rate bitstream_path bit_file_name result_path vivado_srcs_path
+
 # User Inputs
 N_Parallel          = int(sys.argv[1])
 COM_port            = sys.argv[2]
 baud_rate           = int(sys.argv[3])
-bit_file_name       = sys.argv[4]
-bitstream_path      = sys.argv[5]
+bitstream_path      = sys.argv[4]
+bit_file_name       = sys.argv[5]
 result_path         = sys.argv[6]
 vivado_srcs_path    = sys.argv[7]
 

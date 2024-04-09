@@ -13,6 +13,7 @@ class RLOC_Collection:
     device          :   Arch
     iteration       :   int
     desired_tile    :   str
+    overwrite       :   bool    = field(default = True)
     covered_pips    :   dict    = field(default_factory = dict)
     #TC              :   Config  = field(default=None)
     TC_idx          :   int     = field(default = 0)
@@ -23,7 +24,8 @@ class RLOC_Collection:
     def __post_init__(self):
         # create the iteration folder
         cfg.config_path = os.path.join(cfg.config_path, f'iter{self.iteration}')
-        util.create_folder(cfg.config_path)
+        if not os.path.exists(cfg.config_path) and self.overwrite:
+            util.create_folder(cfg.config_path)
 
         # set minimal_configs files
         cfg.minimal_config_path = os.path.join(cfg.minimal_config_path, f'iter{self.iteration}')

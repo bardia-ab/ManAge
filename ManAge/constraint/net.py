@@ -7,11 +7,20 @@ import utility.config as cfg
 class Net:
 
     def __init__(self, name, G):
-        self.name       = name
+        self._name       = name
         self.constraint = self.get_constraint(G)
 
     def __repr__(self):
         return f'Net(name={self.name})'
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, name):
+        self.constraint = re.sub(self.name, name, self.constraint)
+        self._name = name
 
     @staticmethod
     def RRG(G):
@@ -99,7 +108,11 @@ class Net:
     
     @staticmethod
     def get_subgraphs(G, g_buffer):
-        buffer_in = next(filter(lambda node: cfg.LUT_in_pattern.match(node) and G.out_degree(node) != 0, G))
+        try:
+            buffer_in = next(filter(lambda node: cfg.LUT_in_pattern.match(node) and G.out_degree(node) != 0, G))
+        except StopIteration:
+            return G, None
+
         not_in = next(filter(lambda node: cfg.LUT_in_pattern.match(node) and G.out_degree(node) == 0, G))
         neigh = next(G.neighbors(buffer_in))
         src = next(node for node in G if G.in_degree(node) == 0)

@@ -8,6 +8,8 @@ class Cell:
         if self.type == 'LUT':
             self.inputs    = []
 
+    def __repr__(self):
+        return f'CELL(name={self.cell_name}, BEL={self.slice}/{self.bel})'
 
     def get_BEL(self):
         return f'set_property BEL {self.bel} [get_cells {self.cell_name}]\n'

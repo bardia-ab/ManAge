@@ -1,5 +1,5 @@
 import copy
-import sys, time
+import sys, time, os
 import networkx as nx
 #sys.path.insert(0, r'..\utility')
 from typing import Set, Tuple
@@ -169,9 +169,13 @@ class Arch:
         return G
 
     def set_compressed_graph(self, tile: str, default_weight=1):
-        x, y = nd.get_x_coord(tile), nd.get_y_coord(tile)
-        xlim_down, xlim_up, ylim_down, ylim_up = (x - 12 - 4), (x + 12 + 4), (y - 12 - 4), (y + 12 + 4)
-        G = self.get_graph(default_weight=default_weight, xlim_down=xlim_down, xlim_up=xlim_up, ylim_down=ylim_down, ylim_up=ylim_up)
+        if not (f'G_{self.name}_{tile}.data' in os.listdir(cfg.graph_path)):
+            x, y = nd.get_x_coord(tile), nd.get_y_coord(tile)
+            xlim_down, xlim_up, ylim_down, ylim_up = (x - 12 - 4), (x + 12 + 4), (y - 12 - 4), (y + 12 + 4)
+            G = self.get_graph(default_weight=default_weight, xlim_down=xlim_down, xlim_up=xlim_up, ylim_down=ylim_down, ylim_up=ylim_up)
+        else:
+            G = util.load_data(cfg.graph_path, f'G_{self.name}_{tile}.data')
+
         pipjuncs = {node for pip in self.gen_pips(tile) for node in pip}
         in_ports = set(filter(lambda node: nd.get_INT_node_mode(G, node) == 'in', pipjuncs))
         out_ports = set(filter(lambda node: nd.get_INT_node_mode(G, node) == 'out', pipjuncs))
@@ -207,6 +211,7 @@ class Arch:
         G.remove_nodes_from({'s', 't'})
         unused_tile_nodes = {node for node in G if nd.get_tile(node) not in used_tiles}
         G.remove_nodes_from(unused_tile_nodes)
+
         self.G = copy.deepcopy(G)
 
         # set pips_length_dict
@@ -215,7 +220,8 @@ class Arch:
             if pip[0] in path_in_length_dict and pip[1] in path_out_length_dict:
                 self.pips_length_dict[pip] = path_in_length_dict[pip[0]] + path_out_length_dict[pip[1]]
 
-        util.store_data(cfg.graph_path, f'G_{self.name}_{tile}.data', G)
+        if not (f'G_{self.name}_{tile}.data' in os.listdir(cfg.graph_path)):
+            util.store_data(cfg.graph_path, f'G_{self.name}_{tile}.data', G)
 
     def set_pips_length_dict(self, tile: str):
         sources = set(filter(cfg.Source_pattern.match, self.G))

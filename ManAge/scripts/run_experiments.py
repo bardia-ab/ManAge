@@ -41,6 +41,6 @@ for CR in CRs:
     experiment_script = Path(__file__).parent.parent / 'run_experiment.py'
     for TC in TCs:
         os.system(
-            f'{cfg.python} {experiment_script} {N_Parallel} {COM_port} {baud_rate} {TC.stem} {CR_bitstream_path} {CR_results_path} {CR_vivado_srcs_path}')
+            f'{cfg.python} {experiment_script} {N_Parallel} {COM_port} {baud_rate} {CR_bitstream_path} {TC.stem} {CR_results_path} {CR_vivado_srcs_path}')
 
     pbar.update(1)

@@ -66,8 +66,13 @@ class D_CUT(CUT):
         self.G.add_edges_from(edges)
 
     def set_main_path(self):
-        src = next(node for node in self.G if cfg.Source_pattern.match(node))
-        sink = next(node for node in self.G if cfg.Sink_pattern.match(node))
+        try:
+            src = next(node for node in self.G if cfg.Source_pattern.match(node))
+            sink = next(node for node in self.G if cfg.Sink_pattern.match(node))
+        except StopIteration:
+            self.main_path = Path()
+            return
+
         self.main_path = Path()
         self.main_path. nodes = nx.shortest_path(self.G, src, sink)
 

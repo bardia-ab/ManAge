@@ -6,9 +6,9 @@ import networkx as nx
 
 from xil_res.node import Node as nd
 
-def read_FASM(fasm_fie):
+def read_FASM(fasm_file):
     fasm_list = []
-    with open(fasm_fie) as file:
+    with open(fasm_file) as file:
         for line in file.readlines():
             if line == '\n':
                 continue
@@ -19,6 +19,37 @@ def read_FASM(fasm_fie):
 
 def extract_pip_entries(fasm_list):
     return list(filter(lambda x: '.PIP.' in x, fasm_list))
+
+def get_FASM_graph(device, fasm_file):
+    # create graph
+    G = nx.DiGraph()
+
+    # get FASM list
+    fasm_list = read_FASM(fasm_file)
+
+    # extract pips
+    pip_entries = extract_pip_entries(fasm_list)
+    pips = {convert_FASM_pip(pip_entry) for pip_entry in pip_entries}
+
+    # wire dict
+    used_tiles = {nd.get_tile(node) for pip in pips for node in pip}
+    wires_dict_light = {k: v for k, v in device.wires_dict.items() if k in used_tiles}
+
+    # get wires of used tiles
+    wires = set()
+    for k, v in wires_dict_light.items():
+        wires.update(v)
+
+    # add edges
+    G.add_edges_from(pips)
+    G.add_edges_from(wires)
+
+    # remove unused wires
+    unused_wires = {edge for edge in wires if G.in_degree(edge[0]) == G.out_degree(edge[1]) == 0}
+    G.remove_edges_from(unused_wires)
+
+    return G
+
 
 def get_pips_FASM(*pips, mode=None):
     value = {'set': 1, 'clear': 0, None:'{}'}
@@ -92,9 +123,9 @@ def get_pip_suffix(pip):
     ]
 
     if (nd.get_port(pip[0]), nd.get_port(pip[1])) in bidir_pips:
-        suffix = '.REV'
-    elif (nd.get_port(pip[1]), nd.get_port(pip[0])) in bidir_pips:
         suffix = '.FWD'
+    elif (nd.get_port(pip[1]), nd.get_port(pip[0])) in bidir_pips:
+        suffix = '.REV'
     else:
         suffix = ''
 
@@ -148,7 +179,7 @@ if __name__ == '__main__':
     from xil_res.node import Node as nd
     from bidict import bidict
     device = Arch('xczu9eg')
-    fasm_file = Path('/home/bardia/Downloads/oscillator_floodv2_unit_X2Y1_9eg') / 'oscillator_floodv2_unit_X2Y1_9eg_1clb.fasm'
+    fasm_file = Path(r'C:\Users\t26607bb\Desktop\CPS_Project\RO_Python\bitstream\oscillator_floodv2_unit_X2Y1_9eg') / 'oscillator_floodv2_unit_X2Y1_9eg_1clb.fasm'
     fasm_list = read_FASM(str(fasm_file))
     pip_entries = extract_pip_entries(fasm_list)
     pips = {convert_FASM_pip(pip_entry) for pip_entry in pip_entries}
@@ -159,6 +190,13 @@ if __name__ == '__main__':
     used_tiles = {nd.get_tile(node) for pip in pips for node in pip}
     wires_dict_light = {k: v for k, v in device.wires_dict.items() if k in used_tiles}
     wires_dict = bidict({k: v for key, value in wires_dict_light.items() for (k, v) in value})
+
+    # add wires to G
+    wires = set()
+    for k, v in wires_dict_light.items():
+        wires.update(v)
+
+    G.add_edges_from(wires)
 
     # find ROs
     clb_out_neighs = list(filter(lambda x: re.match('.*LOGIC_OUTS.*', x), G))
