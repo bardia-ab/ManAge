@@ -21,6 +21,8 @@ if __name__ == "__main__":
     desired_tile = 'INT_X46Y90'
     store_name = '1clb_x46y90'
 
+    desired_tiles = [f'INT_X46Y{i}' for i in range(70, 100)]
+
     iteration = len(os.listdir(cfg.minimal_config_path))
 
     # init device
@@ -34,11 +36,12 @@ if __name__ == "__main__":
         minimal_TC = util.load_data(cfg.minimal_config_path, file)
         TC = rloc_collection.create_TC()
 
-        for cut in minimal_TC.CUTs:
-            d_cut = D_CUT(nd.get_coordinate(desired_tile), device.tiles_map, cut, iteration=rloc_collection.iteration)
-            TC.D_CUTs.append(d_cut)
-            TC.fill_nodes(rloc_collection, d_cut)
-            TC.fill_LUTs(d_cut)
+        for desired_tile in desired_tiles:
+            for cut in minimal_TC.CUTs:
+                d_cut = D_CUT(nd.get_coordinate(desired_tile), device.tiles_map, cut, iteration=rloc_collection.iteration)
+                TC.D_CUTs.append(d_cut)
+                TC.fill_nodes(rloc_collection, d_cut)
+                TC.fill_LUTs(d_cut)
 
         util.store_data(cfg.config_path, f'TC_{store_name}.data', TC)
 

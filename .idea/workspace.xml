@@ -6,11 +6,10 @@
   <component name="ChangeListManager">
     <list default="true" id="8ee68646-0de3-42b6-89ad-e460acd658ca" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ManAge/RO/RO_gen_fasm.py" beforeDir="false" afterPath="$PROJECT_DIR$/ManAge/RO/RO_gen_fasm.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ManAge/RO/RO_reloc.py" beforeDir="false" afterPath="$PROJECT_DIR$/ManAge/RO/RO_reloc.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ManAge/config.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/ManAge/config.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ManAge/constraint/FASM.py" beforeDir="false" afterPath="$PROJECT_DIR$/ManAge/constraint/FASM.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ManAge/constraint_generator.py" beforeDir="false" afterPath="$PROJECT_DIR$/ManAge/constraint_generator.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ManAge/scripts/build_TC.py" beforeDir="false" afterPath="$PROJECT_DIR$/ManAge/scripts/build_TC.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ManAge/xil_res/cut.py" beforeDir="false" afterPath="$PROJECT_DIR$/ManAge/xil_res/cut.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ManAge/relocation/relocation_storage.py" beforeDir="false" afterPath="$PROJECT_DIR$/ManAge/relocation/relocation_storage.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -38,34 +37,36 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Python.FASM.executor&quot;: &quot;Run&quot;,
-    &quot;Python.architecture.executor&quot;: &quot;Debug&quot;,
-    &quot;Python.build_TC.executor&quot;: &quot;Debug&quot;,
-    &quot;Python.constraint_generator.executor&quot;: &quot;Debug&quot;,
-    &quot;Python.format_flattened_paths.executor&quot;: &quot;Debug&quot;,
-    &quot;Python.hdl.executor&quot;: &quot;Debug&quot;,
-    &quot;Python.init_project.executor&quot;: &quot;Run&quot;,
-    &quot;Python.node.executor&quot;: &quot;Run&quot;,
-    &quot;Python.path_finder.executor&quot;: &quot;Run&quot;,
-    &quot;Python.path_finder_wrapper (1).executor&quot;: &quot;Run&quot;,
-    &quot;Python.path_finder_wrapper.executor&quot;: &quot;Debug&quot;,
-    &quot;Python.relocate_CUTs.executor&quot;: &quot;Run&quot;,
-    &quot;Python.run_experiments2.executor&quot;: &quot;Run&quot;,
-    &quot;Python.temp.executor&quot;: &quot;Debug&quot;,
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/home/bardia/Desktop/ManAge&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Python.FASM.executor": "Debug",
+    "Python.RO_gen_fasm.executor": "Run",
+    "Python.RO_reloc.executor": "Debug",
+    "Python.architecture.executor": "Debug",
+    "Python.build_TC.executor": "Debug",
+    "Python.constraint_generator.executor": "Debug",
+    "Python.format_flattened_paths.executor": "Debug",
+    "Python.hdl.executor": "Debug",
+    "Python.init_project.executor": "Run",
+    "Python.node.executor": "Run",
+    "Python.path_finder.executor": "Run",
+    "Python.path_finder_wrapper (1).executor": "Run",
+    "Python.path_finder_wrapper.executor": "Debug",
+    "Python.relocate_CUTs.executor": "Run",
+    "Python.run_experiments2.executor": "Run",
+    "Python.temp.executor": "Debug",
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "last_opened_file_path": "/home/bardia/Desktop/ManAge",
+    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/ManAge/xil_res" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.build_TC">
+  <component name="RunManager" selected="Python.RO_gen_fasm">
     <configuration name="FASM" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="ManAge" />
       <option name="ENV_FILES" value="" />
@@ -80,6 +81,50 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/ManAge/constraint/FASM.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="RO_gen_fasm" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="ManAge" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/ManAge/RO" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/ManAge/RO/RO_gen_fasm.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="RO_reloc" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="ManAge" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/ManAge/RO" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/ManAge/RO/RO_reloc.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -132,57 +177,13 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="format_flattened_paths" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="ManAge" />
-      <option name="ENV_FILES" value="" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/ManAge" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/ManAge/format_flattened_paths.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
-    <configuration name="path_finder_wrapper (1)" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="ManAge" />
-      <option name="ENV_FILES" value="" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/ManAge" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/ManAge/path_finder_wrapper.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.RO_gen_fasm" />
+        <item itemvalue="Python.RO_reloc" />
+        <item itemvalue="Python.FASM" />
         <item itemvalue="Python.build_TC" />
         <item itemvalue="Python.constraint_generator" />
-        <item itemvalue="Python.FASM" />
-        <item itemvalue="Python.path_finder_wrapper (1)" />
-        <item itemvalue="Python.format_flattened_paths" />
       </list>
     </recent_temporary>
   </component>
@@ -244,7 +245,7 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/ManAge/constraint/FASM.py</url>
-          <line>174</line>
+          <line>212</line>
           <option name="timeStamp" value="40" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
@@ -256,6 +257,16 @@
           <url>file://$PROJECT_DIR$/ManAge/scripts/build_TC.py</url>
           <line>49</line>
           <option name="timeStamp" value="52" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/ManAge/RO/RO_reloc.py</url>
+          <line>43</line>
+          <option name="timeStamp" value="55" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/ManAge/RO/RO_gen_fasm.py</url>
+          <line>51</line>
+          <option name="timeStamp" value="57" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>

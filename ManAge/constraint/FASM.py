@@ -135,7 +135,7 @@ def get_OUTMUX_FASM(tile, label, subLUT_idx, value):
     return f'{tile}.OUTMUX{label}.D{subLUT_idx} = {value}'
 
 def get_LUT_INIT_FASM(LUT_tile, label, init):
-    return f"{LUT_tile}.{label}LUT.INIT[63:0] = 64h'{init}"
+    return f"{LUT_tile}.{label}LUT.INIT[63:0] = 64'h{init}"
 
 def get_dual_LUT_FASM(LUT_tile, label, value):
     i6_dct = {

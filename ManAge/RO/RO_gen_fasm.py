@@ -16,9 +16,9 @@ import utility.utility_functions as util
 #blank_bitstream = r"C:\Users\t26607bb\Desktop\CPS_Project\RO_Python\bitstream\blank_zu9eg_jtag.bit"
 #pyteman_path = r'C:\Users\t26607bb\Desktop\Pyteman\pyteman_dist\fasm2bit.py'
 
-TC_path = r'/mnt/c/Users/t26607bb/Desktop/CPS_Project/Path_Search/Data_xczu9eg_RO/Configurations/iter1'
-blank_bitstream = r"/mnt/c/Users/t26607bb/Desktop/CPS_Project/RO_Python/bitstream/blank_zu9eg_jtag.bit"
-pyteman_path = r'/mnt/c/Users/t26607bb/Desktop/Pyteman/pyteman_dist/fasm2bit.py'
+TC_path = r'/home/bardia/Desktop/bardia/ManAge_Data/Data_xczu9eg_RO/Configurations/iter1'
+blank_bitstream = r"/home/bardia/Downloads/blank_zu9eg_jtag.bit"
+pyteman_path = r'/home/bardia/Downloads/pyteman/pyteman_dist/fasm2bit.py'
 
 
 iter = Path(TC_path).stem
@@ -46,6 +46,14 @@ for file in os.listdir(TC_path):
             value = 1
             fasm_list.add((get_OUTMUX_FASM(tile, label, subLUT_idx, value)))
 
+    for LUT in TC.LUTs:
+        LUT = TC.LUTs[LUT]
+        # get init value
+        tile = LUT.tile
+        label = LUT.label
+        init = LUT.get_init()
+        fasm_list.add(get_LUT_INIT_FASM(tile, label, init))
+
     fasm_list.update(get_pips_FASM(*pips, mode='set'))
 
 
@@ -54,6 +62,7 @@ for file in os.listdir(TC_path):
     with open(str(store_file), 'w+') as fasm_file:
         #fasm = '\n'.join(fasm_list)
         fasm_file.write('\n'.join(fasm_list))
+        fasm_file.write('\n')
 
     output_bitstream = bitstream_path / f'{file.split(".")[0]}.bit'
 

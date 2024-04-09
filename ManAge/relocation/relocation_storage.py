@@ -24,7 +24,7 @@ class RLOC_Collection:
     def __post_init__(self):
         # create the iteration folder
         cfg.config_path = os.path.join(cfg.config_path, f'iter{self.iteration}')
-        if not os.path.exists(cfg.config_path) and self.overwrite:
+        if not os.path.exists(cfg.config_path) or self.overwrite:
             util.create_folder(cfg.config_path)
 
         # set minimal_configs files
