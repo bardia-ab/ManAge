@@ -22,6 +22,12 @@ class CUT:
     def __hash__(self):
         return hash((self.origin, self.index))
 
+    def get_x_coord(self):
+        return nd.get_x_coord(self.origin)
+
+    def get_y_coord(self):
+        return nd.get_y_coord(self.origin)
+
     def add_path(self, path):
         self.paths.append(path)
         self.G.add_edges_from(path.get_edges())
