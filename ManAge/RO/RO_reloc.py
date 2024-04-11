@@ -14,14 +14,11 @@ from xil_res.node import Node as nd
 if __name__ == "__main__":
 
     # User's inputs
-    #device_name = sys.argv[1]
-    #desired_tile = sys.argv[2]
+    device_name = sys.argv[1]
+    desired_tile = sys.argv[2]
+    store_name = sys.argv[3]
+    desired_tiles = sys.argv[4:]
 
-    device_name = 'xczu9eg'
-    desired_tile = 'INT_X46Y90'
-    store_name = '1clb_x46y90'
-
-    desired_tiles = [f'INT_X46Y{i}' for i in range(70, 100)]
 
     iteration = len(os.listdir(cfg.minimal_config_path))
 
