@@ -31,6 +31,7 @@ class D_CUT(CUT):
         tiles_map = tiles_map
         nodes_dict = {node: nd.dislocate_node(tiles_map, node, self.origin, origin=cut.origin) for node in cut.G}
         if None in nodes_dict.values():
+            print(nodes_dict)
             raise ValueError(f'{next(k for k,v in nodes_dict.items() if v is None)}: invalid node in D_CUT!')
 
         return nodes_dict

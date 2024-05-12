@@ -32,12 +32,6 @@ if __name__ == "__main__":
     store_name = sys.argv[3]
     desired_tiles = sys.argv[4:]
 
-
-    '''device_name = 'xczu9eg'
-    desired_tile = 'INT_X46Y90'
-    store_name = '2clb_X38Y60_X38Y61'
-    desired_tiles = ['X38Y60', 'X38Y65']'''
-
     iteration = len(os.listdir(cfg.minimal_config_path))
 
     # init device

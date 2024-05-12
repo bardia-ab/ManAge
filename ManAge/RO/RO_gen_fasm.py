@@ -50,28 +50,32 @@ def gen_bitstreams(TC_path, file, store_path, bitstream_path, pyteman_path, blan
     os.system(f'{cfg.python} {pyteman_path} {store_file} {blank_bitstream} {str(bitstream_path / output_bitstream)}')
 
 # user input
-#TC_path = sys.argv[1]
-#TC_path = r'C:\Users\t26607bb\Desktop\CPS_Project\Path_Search\Data_xczu9eg_RO\Configurations\iter1'
-#blank_bitstream = r"C:\Users\t26607bb\Desktop\CPS_Project\RO_Python\bitstream\blank_zu9eg_jtag.bit"
-#pyteman_path = r'C:\Users\t26607bb\Desktop\Pyteman\pyteman_dist\fasm2bit.py'
+TC_path = sys.argv[1]
+TC_name = sys.argv[2]
+blank_bitstream = sys.argv[3]
+pyteman_path = sys.argv[4]
 
-TC_path = r'/home/bardia/Desktop/bardia/ManAge_Data/Data_xczu9eg_RO/Configurations/iter1'
-blank_bitstream = r"/home/bardia/Downloads/blank_zu9eg_jtag.bit"
-pyteman_path = r'/home/bardia/Downloads/pyteman/pyteman_dist/fasm2bit.py'
+#TC_path = r'/home/bardia/Desktop/bardia/ManAge_Data/Data_xczu9eg_RO/Configurations/iter1'
+#blank_bitstream = r"/home/bardia/Downloads/blank_zu9eg_jtag.bit"
+#pyteman_path = r'/home/bardia/Downloads/pyteman/pyteman_dist/fasm2bit.py'
 
 
 iter = Path(TC_path).stem
 store_path = Path(TC_path).parent.parent / 'FASM' / iter
-util.create_folder(store_path)
+if not os.path.exists(store_path):
+    util.create_folder(store_path)
 
 bitstream_path = Path(TC_path).parent.parent / 'Bitstreams' / iter
-util.create_folder(bitstream_path)
+if not os.path.exists(bitstream_path):
+    util.create_folder(bitstream_path)
 
-'''for file in os.listdir(TC_path):
+
+'''
+for file in Path(TC_path).glob(f'TC_{TC_name}.data'):
     fasm_list = set()
 
     # load TC
-    TC = util.load_data(TC_path, file)
+    TC = util.load_data(TC_path, file.name)
 
     pips = set()
     for cut in TC.D_CUTs:
@@ -96,14 +100,14 @@ util.create_folder(bitstream_path)
     fasm_list.update(get_pips_FASM(*pips, mode='set'))
 
 
-    store_file = store_path / f'{file.split(".")[0]}.fasm'
+    store_file = store_path / f'{file.stem}.fasm'
 
     with open(str(store_file), 'w+') as fasm_file:
         #fasm = '\n'.join(fasm_list)
         fasm_file.write('\n'.join(fasm_list))
         fasm_file.write('\n')
 
-    output_bitstream = bitstream_path / f'{file.split(".")[0]}.bit'
+    output_bitstream = bitstream_path / f'{file.stem}.bit'
 
     os.system(f'{cfg.python} {pyteman_path} {store_file} {blank_bitstream} {str(bitstream_path / output_bitstream)}')'''
 
