@@ -148,7 +148,7 @@ class Config:
         for subLUT in cut.subLUTs:
             LUT_cap[subLUT.get_LUT_name()] -= subLUT.get_occupancy()
 
-        return all(map(lambda cap: cap > 0, LUT_cap.values()))
+        return all(map(lambda cap: cap >= 0, LUT_cap.values()))
 
     def check_FF_util(self, cut: D_CUT):
         return all(map(lambda ff: ff.name not in self.FFs, cut.FFs))

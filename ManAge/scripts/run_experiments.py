@@ -12,7 +12,7 @@ COM_port = '/dev/ttyUSB0'
 N_Parallel = 50
 
 # Required Directories
-Data_path           = '/home/bardia/Desktop/bardia/Timing_Characterization/X1Y5'
+Data_path           = '/home/bardia/Desktop/bardia/Timing_Characterization/Data_xczu9eg'
 bitstream_path      = Path(Data_path) / 'Bitstreams'            # program
 results_path        = Path(Data_path) / 'Results'               # store
 vivado_srcs_path    = Path(Data_path) / 'Vivado_Sources'        # validation
