@@ -74,7 +74,7 @@ class ClockGroup:
         self._CD         = ClockDomain()
 
     def set(self, ff_node: str, test_collection):
-        TC = test_collection.TC_dict
+        TC = test_collection.TC
         clock_domain = test_collection.get_clock_domain(ff_node)
 
         # globalize group_mates
@@ -134,7 +134,7 @@ class ClockGroup:
         G.add_edges_from(edges)
 
     def remove_other_CDs_virtual_src_sink(self, test_collection):
-        TC = test_collection.TC_dict
+        TC = test_collection.TC
         other_CDs = {CD for CD in test_collection.clock_domains if CD != self.CD}
         edges = set()
         for other_CD in other_CDs:
@@ -144,7 +144,7 @@ class ClockGroup:
         TC.G.remove_edges_from(edges)
 
     def restore_other_CDs_virtual_src_sink(self, test_collection):
-        TC = test_collection.TC_dict
+        TC = test_collection.TC
         other_CDs = {CD for CD in test_collection.clock_domains if CD != self.CD}
         edges = set()
         for other_CD in other_CDs:
