@@ -71,7 +71,7 @@ class PIP(Edge):
             LUT_capacity = LUT_primitive.capacity
             occupancy = 2 if (cfg.LUT_in6_pattern.match(self.neigh_v)) else 1
 
-            if occupancy == 1:
+            if LUT_capacity == 1:
                 attributes = {'get_clb_node_type': 'CLB_muxed',
                               'get_clock_group': nd.get_clock_group(self.neigh_v),
                               'get_label': nd.get_label(self.neigh_v)
@@ -84,7 +84,7 @@ class PIP(Edge):
             LUT_capacity = LUT_primitive.capacity
             occupancy = 2 if (cfg.MUXED_CLB_out_pattern.match(self.pred_u)) else 1
 
-            if occupancy == 1:
+            if LUT_capacity == 1:
                 attributes = {'get_clb_node_type': 'LUT_in',
                               'get_bel_index' : 6,
                               'get_clock_group': nd.get_clock_group(self.pred_u),
