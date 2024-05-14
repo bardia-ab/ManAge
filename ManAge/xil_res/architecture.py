@@ -7,6 +7,7 @@ from itertools import product
 import utility.utility_functions as util
 import utility.config as cfg
 from xil_res.node import Node as nd
+from xil_res.edge import Edge
 from xil_res.clock_region import CR
 from xil_res.router import path_finder, weight_function
 from xil_res.primitive import FF, LUT, SubLUT
@@ -306,6 +307,32 @@ class Arch:
             pips = set(self.pips_length_dict.keys())
 
         return pips
+
+    def reform_cost(self):
+        for edge in self.G.edges():
+            if nd.get_tile(edge[0]) == nd.get_tile(edge[1]):
+                if nd.get_tile_type(edge[0]) == 'CLB':
+                    if any(map(lambda node: cfg.MUXED_CLB_out_pattern.match(node), edge)):
+                        weight = 100
+                    elif cfg.LUT_in6_pattern.match(edge[0]):
+                        weight = 50
+                    else:
+                        weight = 25  # CLB_Route_Thru
+                else:
+                    continue
+            else:
+                continue
+
+            self.G.get_edge_data(*edge)['weight'] = weight
+
+    def reset_costs(self, test_collection):
+        desired_tile, queue = test_collection.desired_tile, test_collection.queue
+        for edge in self.G.edges:
+            weight = self.weight(*edge, self.G.get_edge_data(*edge))
+            if Edge(edge).get_type() == 'pip' and nd.get_tile(edge[0]) == desired_tile and edge not in queue:
+                weight += 0.5
+
+            self.G.get_edge_data(*edge)['weight'] = weight
 
 
 if __name__ == '__main__':
