@@ -33,9 +33,11 @@ class TestCollection:
         self.n_pips = len(self.queue)
 
     def __getstate__(self):
-        state = self.__class__.__dict__.copy()  # Copy the dict to avoid modifying the original
+        state = self.__dict__.copy()  # Copy the dict to avoid modifying the original
         # Remove the attribute that should not be pickled
         del state['pbar']
+        del state['device']
+        #del state['TC']
         return state
 
     def __setstate__(self, state):
