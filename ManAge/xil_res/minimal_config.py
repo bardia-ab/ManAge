@@ -63,6 +63,10 @@ class MinConfig:
 
     def fill_CUT(self, test_collection, path):
         cut = self.CUTs[-1]
+
+        if not nx.is_tree(cut.G):
+            breakpoint()
+
         # 1- set CD
         self.set_CDs(test_collection, path)
         # 3- specify subluts & update path subluts. it also adds the sublut into LUT
@@ -482,7 +486,7 @@ class MinConfig:
         return pip
 
     def pick_pip2(self, test_collection):
-        cut = test_collection.TC_dict.CUTs[-1]
+        cut = test_collection.TC.CUTs[-1]
         device = test_collection.device
         pips = test_collection.queue
         weights = {}
