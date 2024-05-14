@@ -29,7 +29,8 @@ class RLOC_Collection:
 
         # set minimal_configs files
         cfg.minimal_config_path = os.path.join(cfg.minimal_config_path, f'iter{self.iteration}')
-        self.minimal_configs = sorted(os.listdir(cfg.minimal_config_path), key=lambda x: int(re.findall('\d+', x).pop()))
+        self.minimal_configs = list(filter(lambda file: file.startswith('TC'), os.listdir(cfg.minimal_config_path)))
+        self.minimal_configs.sort(key=lambda x: int(re.findall('\d+', x).pop()))
 
         # create pbar
         length = len(self.minimal_configs)
