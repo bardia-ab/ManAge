@@ -155,7 +155,13 @@ def get_segments_delays(rcvd_data, N_Bytes, w_shift, N_Parallel, sps):
     return segments_delays
 
 def validate_result(segments, vivado_srcs_path, TC_name, N_Parallel):
-    stats_file = Path(vivado_srcs_path) / TC_name / 'stats.txt'
+    try:
+        vivado_srcs_path = next(Path(vivado_srcs_path).rglob(TC_name))
+    except:
+        print(vivado_srcs_path, TC_name)
+        exit()
+
+    stats_file = vivado_srcs_path / 'stats.txt'
     with open(stats_file) as lines:
         N_segments = int(re.search('\d+', next(lines))[0])
         N_partial = int(re.search('\d+', next(lines))[0])
@@ -163,6 +169,9 @@ def validate_result(segments, vivado_srcs_path, TC_name, N_Parallel):
     if N_partial > 0:
         l_segments = N_segments + 1
         if all(map(lambda x: len(x) == N_Parallel, segments[:-1])) and len(segments[-1]) == N_partial and len(segments) == l_segments:
+            result = True
+        elif all(map(lambda x: len(x) == N_Parallel, segments[:-1])) and len(segments[-1]) == N_Parallel and len(segments) == l_segments:
+            del segments[-1][N_partial:]
             result = True
         else:
             result = False

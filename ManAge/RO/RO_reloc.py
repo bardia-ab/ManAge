@@ -1,5 +1,8 @@
 import os, sys
 from pathlib import Path
+
+import networkx as nx
+
 if not (Path(os.getcwd()).parts[-1] == Path(os.getcwd()).parts[-2] == 'ManAge'):
     sys.path.append(str(Path(__file__).parent.parent))
     os.chdir(str(Path(__file__).parent.parent))
@@ -11,6 +14,16 @@ from relocation.relocation_storage import RLOC_Collection
 from relocation.cut import D_CUT
 from xil_res.node import Node as nd
 
+def check_node_collision(graphs):
+    seen_nodes = set()
+    for G in graphs:
+        if set(G.nodes) & seen_nodes:
+            return False
+
+        seen_nodes.update(G.nodes)
+
+    return True
+
 if __name__ == "__main__":
 
     # User's inputs
@@ -18,7 +31,6 @@ if __name__ == "__main__":
     desired_tile = sys.argv[2]
     store_name = sys.argv[3]
     desired_tiles = sys.argv[4:]
-
 
     iteration = len(os.listdir(cfg.minimal_config_path))
 
@@ -33,15 +45,14 @@ if __name__ == "__main__":
         minimal_TC = util.load_data(cfg.minimal_config_path, file)
         TC = rloc_collection.create_TC()
 
-        for desired_tile in desired_tiles:
+        G_tiles = len(desired_tiles) * [nx.DiGraph()]
+        for idx, desired_tile in enumerate(desired_tiles):
             for cut in minimal_TC.CUTs:
                 d_cut = D_CUT(nd.get_coordinate(desired_tile), device.tiles_map, cut, iteration=rloc_collection.iteration)
-                TC.D_CUTs.append(d_cut)
-                TC.fill_nodes(rloc_collection, d_cut)
-                TC.fill_LUTs(d_cut)
 
-        util.store_data(cfg.config_path, f'TC_{store_name}.data', TC)
+                if TC.check_LUT_util(d_cut) and TC.check_FF_util(d_cut):
+                    TC.add_D_CUT(rloc_collection, d_cut)
+                    G_tiles[idx] = nx.compose(G_tiles[idx], d_cut.G)
 
-    rloc_collection.pbar.set_postfix_str(rloc_collection.get_coverage())
-
-
+        if check_node_collision(G_tiles):
+            util.store_data(cfg.config_path, f'TC_{store_name}.data', TC)
