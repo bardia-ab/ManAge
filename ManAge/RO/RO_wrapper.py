@@ -9,7 +9,7 @@ import utility.config as cfg
 # user inputs
 device_name = 'xczu9eg'
 desired_tile = 'INT_X46Y90'
-TC_name = '1clb_X31Y142'
+TC_name = '1clb_X46Y90'
 
 TC_path = r'C:\Users\t26607bb\Desktop\CPS_Project\Path_Search\Data_xczu9eg_RO\Configurations\iter1'
 blank_bitstream = r"C:\Users\t26607bb\Desktop\CPS_Project\RO_Python\bitstream\blank_zu9eg_jtag.bit"
@@ -20,7 +20,7 @@ reloc_script = str(CWD / 'RO_reloc.py')
 gen_fsm_script = str(CWD / 'RO_gen_fasm.py')
 
 # Relocation
-desired_tiles = ['INT_X31Y142', ]
+desired_tiles = ['INT_X46Y90', ]
 os.system(f'{cfg.python} "{reloc_script}" {device_name} {desired_tile} {TC_name} {" ".join(desired_tiles)}')
 
 # generate FASM & bitstreamc

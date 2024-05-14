@@ -80,7 +80,11 @@ class Net:
 
         elif any(filter(lambda node: cfg.LUT_in_pattern.match(node) and G.out_degree(node) != 0, G)):
             buffer_in = next(filter(lambda node: cfg.LUT_in_pattern.match(node) and G.out_degree(node) != 0, G))
-            not_in = next(filter(lambda node: cfg.LUT_in_pattern.match(node) and G.out_degree(node) == 0, G))
+            try:
+                not_in = next(filter(lambda node: cfg.LUT_in_pattern.match(node) and G.out_degree(node) == 0, G))
+            except StopIteration:
+                raise ValueError('Branch at LUT input')
+
             neigh = next(G.neighbors(buffer_in))
             src = next(node for node in G if G.in_degree(node) == 0)
             sink = next(node for node in G if G.out_degree(node) == 0 and re.match(cfg.FF_in_pattern, node))
@@ -96,7 +100,7 @@ class Net:
             branch_sink_path = nx.shortest_path(G, brnch_node, sink)
 
             if buffer_in not in src_sink_path:
-                g_buffer = "01"     #not_path belongs to Q_launch and route_thru is between brnc_node and not_in
+                g_buffer = "01"     #not_path belongs to Q_launch and route_thru is between branch_node and not_in
             elif neigh in branch_sink_path:
                 g_buffer = "10"     # not_path belongs to Q_launch
             else:

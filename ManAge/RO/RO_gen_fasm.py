@@ -44,7 +44,7 @@ for file in Path(TC_path).glob(f'TC_{TC_name}.data'):
             OUTMUX_node = list(OUTMUX_node)[0]
             tile = nd.get_tile(OUTMUX_node)
             label = nd.get_label(OUTMUX_node)
-            subLUT_idx = 6
+            subLUT_idx = 5
             value = 1
             fasm_list.add((get_OUTMUX_FASM(tile, label, subLUT_idx, value)))
 

@@ -64,10 +64,10 @@ if __name__ == '__main__':
     configuration_files = list(filter(lambda x: x.startswith('TC'), os.listdir(config_path)))
 
     # create progress bar
-    pbar_1 = tqdm(total=len(device.CRs))
+    #pbar_1 = tqdm(total=len(device.CRs))
 
     for clock_region in device.CRs:
-        pbar_1.set_postfix(Clock_Region=clock_region)
+        #pbar_1.set_postfix(Clock_Region=clock_region)
 
         # create the subfolder
         clock_region_path = os.path.join(cfg.vivado_res_path, clock_region.name)
@@ -75,12 +75,15 @@ if __name__ == '__main__':
 
         # create progress bar
         pbar_2 = tqdm(total=len(configuration_files), leave=True)
+        pbar_2.set_description(clock_region.name)
 
-        Parallel(n_jobs=-1, require='sharedmem')(
+        '''Parallel(n_jobs=-1, require='sharedmem')(
             delayed(func)(config_path, file, clock_region, device.site_dict, clock_region_path, pbar_2) for file in
-            configuration_files)
+            configuration_files)'''
 
-        '''for file in configuration_files:
+        for file in configuration_files:
+            if file != 'TC26.data' or clock_region.name != 'X2Y2':
+                continue
 
             pbar_2.set_postfix(Configuration=file)
 
@@ -89,6 +92,17 @@ if __name__ == '__main__':
             TC = util.load_data(config_path, file)
             CUTs = filter(lambda x: x.origin in clock_region.tiles, TC.D_CUTs)
             CUTs = sorted(CUTs, key=lambda x: (x.index, x.get_x_coord(), x.get_y_coord()))
+
+            # invalid cuts
+            invalid_CUTs = set()
+            for cut in CUTs:
+                if len(list(filter(lambda node: cfg.LUT_in_pattern.match(node) and cut.G.out_degree(node) != 0, cut.G))) > 1:
+                    invalid_CUTs.add(cut)
+                elif len(list(filter(lambda node: cfg.LUT_in_pattern.match(node) and cut.G.out_degree(node) == 0, cut.G))) == 0:
+                    invalid_CUTs.add(cut)
+
+            CUTs = [cut for cut in CUTs if cut not in invalid_CUTs]
+            print(f'Invalid CUTs: {len(invalid_CUTs)}')
 
             # create a configuration for constraints
             N_CUTs = len(CUTs)
@@ -102,8 +116,12 @@ if __name__ == '__main__':
                 Seg_idx = idx // cfg.N_Parallel
                 w_Error_Mux_In = f'w_Error({Seg_idx})({CUT_idx})'
 
-                # fill nets
-                configuration.fill_nets(cut, idx)
+                try:
+                    # fill nets
+                    configuration.fill_nets(cut, idx)
+                except ValueError as e:
+                    print(f'TC{TC_idx}>>CUT{cut.index}')
+                    continue
 
                 # fill cells
                 configuration.fill_cells(device.site_dict, cut, idx)
@@ -119,6 +137,6 @@ if __name__ == '__main__':
             util.create_folder(vivado_src_path)
             configuration.print_src_files(vivado_src_path)
 
-            pbar_2.update(1)'''
+            pbar_2.update(1)
 
-    pbar_1.update(1)
+    #pbar_1.update(1)
