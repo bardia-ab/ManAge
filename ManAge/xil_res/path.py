@@ -290,6 +290,7 @@ class PathOut(Path):
             #for node in uncovered_pips_u:
                 #blocked_nodes.update(TC.get_global_nodes(node))
             blocked_nodes.update(uncovered_pips_u)
+            blocked_nodes.update(main_path.pip.get_invalid_FF_route_thru_nodes(TC))
 
         if not first_order:
             # long_pips
@@ -448,7 +449,7 @@ class MainPath(Path):
 
 
     def route(self, test_collection):
-        TC = test_collection.TC_dict
+        TC = test_collection.TC
         pips = test_collection.queue
         self.prev_CD = copy.deepcopy(TC.CD)
         paths = self.sort_paths()
@@ -468,6 +469,14 @@ class MainPath(Path):
         self.path_in = next(path for path in paths if path.type == 'path_in')
         self.path_out = next(path for path in paths if path.type == 'path_out')
         self.nodes = self.path_in.nodes + self.path_out.nodes
+        self.error = not(self.validate_buffers())
+
+    def validate_buffers(self):
+        result = False
+        if len(list(filter(lambda node: cfg.CLB_out_pattern.match(node), self.nodes))) <= 1:
+            result = True
+
+        return result
 
 
 class NotPath(Path):
@@ -491,7 +500,7 @@ class NotPath(Path):
 
     def get_blocked_nodes(self, test_collection):
         device = test_collection.device
-        TC = test_collection.TC_dict
+        TC = test_collection.TC
         cut = TC.CUTs[-1]
 
         # Not path mustn't have route-thrus
@@ -506,7 +515,7 @@ class NotPath(Path):
 
     def route(self, test_collection):
         device = test_collection.device
-        TC = test_collection.TC_dict
+        TC = test_collection.TC
         cut = TC.CUTs[-1]
         self.prev_CD = copy.deepcopy(TC.CD)
         self.assign_virtual_source_sink(TC.G, cut.main_path)
@@ -518,15 +527,34 @@ class NotPath(Path):
             self.nodes = path
         except nx.NetworkXNoPath:
             try:
-                attr['conflict_free'] = False
-                path = self.path_finder(TC.G, self.src, self.sink, **attr)
-                self.nodes = path
+                if len(TC.CUTs) < (cfg.max_capacity / 8):
+                    blocked_nodes -= device.blocking_nodes(TC)
+                    path = self.path_finder(TC.G, self.src, self.sink, **attr)
+                    self.nodes = path
+                else:
+                    raise nx.NetworkXNoPath
+
             except nx.NetworkXNoPath:
-                self.error = True
-                if cfg.print_message:
-                    print(f'No path found for {self.type}!')
+                try:
+                    attr['conflict_free'] = False
+                    path = self.path_finder(TC.G, self.src, self.sink, **attr)
+                    self.nodes = path
+                except nx.NetworkXNoPath:
+                    self.error = True
+                    if cfg.print_message:
+                        print(f'No path found for {self.type}!')
 
         self.remove_virtual_source_sink(TC.G)
 
+        # validate branch
+        self.error = not(self.validate_inv_branch())
+
         if not self.error:
             TC.fill_CUT(test_collection, self)
+
+    def validate_inv_branch(self):
+        result = False
+        if self.nodes and not cfg.LUT_in_pattern.match(self.nodes[0]):
+            result = True
+
+        return result
