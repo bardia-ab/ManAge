@@ -1,6 +1,5 @@
-#from xil_res.architecture import Arch
-#import os
-#os.chdir(os.path.abspath('..'))
+import os, re
+os.chdir(os.path.abspath('..'))
 import utility.utility_functions as util
 from xil_res.node import Node as nd
 
@@ -97,11 +96,59 @@ def get_rloc_wires_dict(wires_dict):
 
     return rloc_wires_dict
 
+def get_regex(node: str) -> str:
 
+    regexp = re.sub(r'(?<!EE|NN|SS|WW)(?<!\d)\d+', '#', node)
+    regexp = re.sub('_[EW]_', '_[EW]_', regexp)
+    regexp = re.sub('_[EW]#', '_[EW]#', regexp)
+    regexp = re.sub('_(BLN|BLS)_', '_(BLN|BLS)_', regexp)
+    regexp = regexp.replace('#', '\d+')
+
+    return regexp
+
+def draw_node_sub_graph(G, node):
+    G1 = nx.DiGraph()
+    G1.add_edges_from(G.in_edges(node))
+    G1.add_edges_from(G.out_edges(node))
+
+    pos = nx.spring_layout(G1)
+    #label_pos = {node: (x, y + 5) for node, (x, y) in pos.items()}
+    nx.draw(G1, pos, with_labels=False, node_size=30000, node_shape="s", node_color="skyblue")
+    node_labels = {node: node for node in G1.nodes()}  # Assuming node labels are the same as node identifiers
+    nx.draw_networkx_labels(G1, pos, labels=node_labels, font_size=10, font_color="black")
+    plt.show()
 
 if __name__ == '__main__':
+    from xil_res.architecture import Arch
+    import matplotlib.pyplot as plt
+    import numpy as np
+    import networkx as nx
+
+    device = Arch('xczu3eg')
 
 
+    G = nx.DiGraph()
+    node_dict = {}
 
+    '''for pip in device.pips:
+        for node in pip:
+            if get_regex(node) not in node_dict:
+                node_dict[get_regex(node)] = f'Node{len(node_dict) + 1}'
+
+        G.add_edge(node_dict[get_regex(pip[0])], node_dict[get_regex(pip[1])])'''
+
+    G.add_edges_from(device.pips)
+
+    #draw_node_sub_graph(G, 'SS1_[EW]_BEG\\d+')
+
+    # Generate the adjacency matrix
+    adj_matrix = nx.adjacency_matrix(G)
+
+    # Convert the sparse matrix to a NumPy array for easier manipulation (if needed)
+    adj_matrix_array = adj_matrix.toarray()
+
+    rank = np.linalg.matrix_rank(adj_matrix_array)
+
+    print("Rank of the adjacency matrix:", rank)
 
     print('hi')
