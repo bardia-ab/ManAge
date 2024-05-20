@@ -61,12 +61,12 @@ def gen_bitstreams(TC_path, file, store_path, bitstream_path, pyteman_path, blan
     fasm_list.update(get_pips_FASM(*pips, mode='set'))
 
     # remove pips
-    #fasm_list.update(remove_pips(removed_pips_file))
+    if Path(removed_pips_file).exists():
+        fasm_list.update(remove_pips(removed_pips_file))
 
     store_file = store_path / f'{file.split(".")[0]}.fasm'
 
     with open(str(store_file), 'w+') as fasm_file:
-        # fasm = '\n'.join(fasm_list)
         fasm_file.write('\n'.join(sorted(fasm_list)))
         fasm_file.write('\n')
 

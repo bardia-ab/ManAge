@@ -9,38 +9,30 @@ if not (Path(os.getcwd()).parts[-1] == Path(os.getcwd()).parts[-2] == 'ManAge'):
 
 from xil_res.architecture import Arch
 from xil_res.test_storage import TestCollection
-from xil_res.minimal_config import MinConfig
 from xil_res.cut import CUT
-from constraint.configuration import ConstConfig
-from constraint.FASM import get_FASM_graph
-import utility.utility_functions as util
-import utility.config as cfg
 
-# desired_tile
-'''device = sys.argv[1]
+# User input
+device = sys.argv[1]
 desired_tile = sys.argv[2]
 iteration = int(sys.argv[3])
-removed_pips_file = sys.argv[4]'''
+clk_pips = sys.argv[4]
 
-device = 'xczu9eg'
-desired_tile    = 'INT_X44Y90'
-iteration       = 4
-clk_pips = str(Path(__file__).parent / 'clk_pips.txt')
 
 # create device
 device = Arch(device)
 device.set_compressed_graph(desired_tile)
 
-#
+# preserve clock PIPs
 removed_pips = set()
-with open (clk_pips) as file:
-    for line in file:
-        line = re.split('<*->+', line)
-        tile = line[0].split('/')[0]
-        pip_u = line[0].split('.')[-1]
-        pip_v = line[1].rstrip("\n")
-        pip = (f'{tile}/{pip_u}', f'{tile}/{pip_v}')
-        removed_pips.add(pip)
+if Path(clk_pips).exists():
+    with open (clk_pips) as file:
+        for line in file:
+            line = re.split('<*->+', line)
+            tile = line[0].split('/')[0]
+            pip_u = line[0].split('.')[-1]
+            pip_v = line[1].rstrip("\n")
+            pip = (f'{tile}/{pip_u}', f'{tile}/{pip_v}')
+            removed_pips.add(pip)
 
 
 # one coordinate
@@ -49,9 +41,7 @@ device.G.remove_nodes_from(invalid_nodes)
 device.G.remove_edges_from(removed_pips)
 
 # get RO paths
-#all_paths = get_ROs2(device.G)
 all_paths = get_ROs3(device.G)
-#joe_ROs = util.load_data(str(Path(__file__).parent), '16_RO.data')
 antennas = get_antennas(device.G, all_paths)
 
 edges = set()
@@ -67,7 +57,6 @@ assert nx.is_forest(G_netlist), "Collision Occured!!!"
 test_collection = TestCollection(iteration=iteration, desired_tile=desired_tile, queue=set())
 
 # create a TC
-#TC = MinConfig(device, 0)
 test_collection.create_TC(device)
 TC = test_collection.TC
 
@@ -120,4 +109,3 @@ for idx, cut in enumerate(TC.CUTs):
 
 const_conf.print_constraints('.')
 '''
-print('end')
