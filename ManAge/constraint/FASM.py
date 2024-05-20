@@ -134,6 +134,9 @@ def get_pip_suffix(pip):
 def get_OUTMUX_FASM(tile, label, subLUT_idx, value):
     return f'{tile}.OUTMUX{label}.D{subLUT_idx} = {value}'
 
+def get_FFMUX_FASM(tile, label, subLUT_idx, MUX_idx, value):
+    return f'{tile}.FFMUX{label}{MUX_idx}.D{subLUT_idx} = {value}'
+
 def get_LUT_INIT_FASM(LUT_tile, label, init):
     return f"{LUT_tile}.{label}LUT.INIT[63:0] = 64'h{init}"
 
@@ -153,6 +156,28 @@ def get_dual_LUT_FASM(LUT_tile, label, value):
     pip = (f'{INT_tile}/VCC_WIRE', f'{INT_tile}/{i6_port}')
 
     return get_pip_setting(pip, value=value)
+
+def get_FF_CTRL_pips(tile, T_B, E_W, FF_index, value):
+    pips = set()
+    tile = f'INT_{nd.get_coordinate(tile)}'
+    FF_pins_dct = {
+        'C': {'B': 'CTRL_{}4', 'T': 'CTRL_{}5'},
+        'SR': {'B': 'CTRL_{}6', 'T': 'CTRL_{}7'},
+        'CE': {'B': 'CTRL_{}0', 'T': 'CTRL_{}2'},
+        'CE2': {'B': 'CTRL_{}1', 'T': 'CTRL_{}3'}
+    }
+    # SR
+    SR = FF_pins_dct['SR'][T_B].format(E_W)
+    pip = (f'{tile}/VCC_WIRE', f'{tile}/{SR}')
+    pips.add(get_pip_setting(pip, value=value))
+
+    # CE
+    CE_key = 'CE2' if FF_index == 2 else 'CE'
+    CE = FF_pins_dct[CE_key][T_B].format(E_W)
+    pip = (f'{tile}/VCC_WIRE', f'{tile}/{CE}')
+    pips.add(get_pip_setting(pip, value=value))
+
+    return pips
 
 def cal_init(input_idx, function, N_inputs):
     entries = get_truth_table(N_inputs)
