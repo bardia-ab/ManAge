@@ -1,12 +1,13 @@
 from dataclasses import dataclass, field
 from math import ceil
-import os
+import os, re
 from typing import List, Set, Any
 import utility.utility_functions as util
 import utility.config as cfg
 from relocation.cut import D_CUT
 from constraint.cell import Cell
 from constraint.net import Net
+from xil_res.node import Node as nd
 import constraint.CUTs_VHDL_template  as tmpl
 
 @dataclass
@@ -95,3 +96,22 @@ class ConstConfig:
         VHDL_path = os.path.join(path, 'CUTs.vhd')
         self.VHDL_file.print(VHDL_path)
 
+    @staticmethod
+    def split_function(D_CUT, method):
+        if method == 'x':
+            return int(re.findall('\d+', D_CUT.origin)[0]) % 2
+        elif method == 'y':
+            return int(re.findall('\d+', D_CUT.origin)[1]) % 2
+        elif method == 'CUT_index':
+            return D_CUT.index % 2
+        elif method == 'FF_in_index':
+            return nd.get_bel_index(next(filter(lambda x: cfg.FF_in_pattern.match(x), D_CUT.G))) % 2
+        else:
+            raise ValueError(f'Method {method} is invalid')
+
+    @staticmethod
+    def split_D_CUTs(TC, method):
+        D_CUTs_even = [D_CUT for R_CUT in TC.CUTs for D_CUT in R_CUT.D_CUTs if ConstConfig.split_function(D_CUT, method) == 0]
+        D_CUTs_odd = [D_CUT for R_CUT in TC.CUTs for D_CUT in R_CUT.D_CUTs if ConstConfig.split_function(D_CUT, method) == 1]
+
+        return D_CUTs_even, D_CUTs_odd
