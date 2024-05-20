@@ -1,6 +1,13 @@
 from experiment.clock_manager import CM
 from pathlib import Path
-import os, re, math
+import os, re, math, sys
+sys.path.append(str(Path(__file__).parent.parent))
+os.chdir(str(Path(__file__).parent.parent))
+from processing.cut_delay import CUTs_List, CUT_Delay
+from xil_res.node import Node as nd
+from constraint.configuration import ConstConfig
+from utility.utility_functions import load_data
+
 
 def pack_bytes(data, N_bytes):
     packets = []
@@ -184,7 +191,6 @@ def validate_result(segments, vivado_srcs_path, TC_name, N_Parallel):
 
     return result
 
-
 def log_results(result, bit_file_name, store_path, type):
     if result:
         print(f'{bit_file_name} => Rising Passed!\n')
@@ -197,3 +203,94 @@ def log_error(bit_file_name, store_path, type):
     error_file = Path(store_path) / 'Errors.txt'
     with open(error_file, 'a+') as file:
         file.write(f'{bit_file_name} => {type} Failed!\n')
+
+def get_invalid_TCs(result_path):
+    TCs = set()
+    files = ['Errors.txt', 'validation.txt']
+    for file in files:
+        if file not in os.listdir(result_path):
+            continue
+
+        with open(os.path.join(result_path, file)) as txt:
+            for line in txt.readlines():
+                if line == '\n':
+                    continue
+
+                TC = line.split(' => ')[0]
+                TCs.add(TC)
+
+    return TCs
+
+def fill_cuts_list(TC_result_path, TC_CUT_path, N_Parallel, TC, skew_path=None):
+    TC_idx = int(re.findall('\d+', TC)[0])
+    results_path = os.path.join(TC_result_path, TC)
+    cuts_list = fill_D_CUTs(TC_CUT_path, TC)
+
+    skew_dict = {}
+    if skew_path:
+        with open(f'{skew_path}/{TC}.txt') as file:
+            for line in file.readlines():
+                try:
+                    CUT_idx, max_skew, min_skew = line.rstrip('\n').split('\t')
+                except:
+                    print(f'********************* {line} ***************')
+                    print(TC_idx)
+                    print(skew_path)
+                    CUT_idx = line.rstrip('\n').split('\t')[0]
+                    max_skew = 0
+                    min_skew = 0
+
+                if not max_skew:
+                    max_skew = 0
+
+                if not min_skew:
+                    min_skew = 0
+
+                path_idx = int(CUT_idx.split('_')[-1]) % N_Parallel
+                seg_idx = int(CUT_idx.split('_')[-1]) // N_Parallel
+                skew_dict[(seg_idx, path_idx)] = (float(max_skew) + float(min_skew)) / 2 * 1e-9
+
+
+    for result in os.listdir(results_path):
+        segments = load_data(results_path, result)
+        for seg_idx, segment in enumerate(segments):
+            for (path_idx, path_delay) in segment:
+                D_CUT_idx = seg_idx * N_Parallel + path_idx
+                try:
+                    cut_delay = cuts_list.CUTs[D_CUT_idx]
+                except:
+                    continue
+
+                cut_delay.seg_idx = seg_idx
+                cut_delay.path_idx = path_idx
+
+                # skew
+                skew = skew_dict[(seg_idx, path_idx)] if skew_path else 0
+
+                if 'rising' in result:
+                    cut_delay.rising_delay = path_delay + skew
+                else:
+                    cut_delay.falling_delay = path_delay + skew
+
+    cuts_list.CUTs = [cut_delay for cut_delay in cuts_list.CUTs if cut_delay.rising_delay != 0 and cut_delay.falling_delay != 0]
+    return cuts_list.CUTs
+
+def fill_D_CUTs(TC_CUT_path, TC):
+    cuts_list = CUTs_List([])
+    TC_idx = int(re.findall('\d+', TC)[0])
+    TC_label = TC.split('_')[0]
+    TC_CUT = load_data(TC_CUT_path, f'{TC_label}.data')
+    if 'even' in TC:
+        D_CUTs, _ = ConstConfig.split_D_CUTs(TC_CUT, 'FF_in_index')
+    elif 'odd' in TC:
+        _, D_CUTs = ConstConfig.split_D_CUTs(TC_CUT, 'FF_in_index')
+    else:
+        D_CUTs = [D_CUT for R_CUT in TC_CUT.CUTs for D_CUT in R_CUT.D_CUTs]
+
+    D_CUTs.sort(key=lambda x: (x.index, nd.get_x_coord(x.origin), nd.get_y_coord(x.origin)))
+    for D_CUT in D_CUTs:
+        edges = [edge for edge in D_CUT.G.edges if D_CUT.G.get_edge_data(*edge)['path_type'] == 'main_path']
+        cut_delay = CUT_Delay(origin=D_CUT.origin, CUT_idx=D_CUT.index, TC_idx=TC_idx, edges=edges)
+        cuts_list.CUTs.append(cut_delay)
+
+    return cuts_list
