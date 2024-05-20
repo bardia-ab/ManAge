@@ -68,8 +68,14 @@ class Arch:
         for cr, tiles in CR_tile_dict.items():
             HCS_Y_coord = CR_HCS_Y_dict[cr]
             CR_obj = CR(cr, HCS_Y_coord)
-            CR_obj.tiles = tiles
+            CR_obj.coords = tiles
             self.CRs.add(CR_obj)
+
+    def get_CR(self, name):
+        try:
+            return next(filter(lambda x: x.name == name, self.CRs))
+        except StopIteration:
+            raise ValueError(f'{name}: Invalid CR!')
 
     def get_INTs(self):
         return {tile for tile in self.wires_dict if tile.startswith('INT')}
