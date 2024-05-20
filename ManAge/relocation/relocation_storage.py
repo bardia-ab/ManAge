@@ -1,4 +1,5 @@
-import os, re, copy
+import os, re
+from pathlib import Path
 from dataclasses import dataclass, field
 from tqdm import tqdm
 from xil_res.architecture import Arch
@@ -12,7 +13,7 @@ import utility.config as cfg
 class RLOC_Collection:
     device          :   Arch
     iteration       :   int
-    desired_tile    :   str
+    #desired_tile    :   str
     overwrite       :   bool    = field(default = True)
     covered_pips    :   dict    = field(default_factory = dict)
     #TC              :   Config  = field(default=None)
@@ -71,7 +72,7 @@ class RLOC_Collection:
     def create_TC(self):
         if self.iteration == 1:
             TC = Config()
-        else:
+        elif (Path(cfg.Data_path) / 'rloc_collection.data').exists():
             prev_rloc_collection = util.load_data(cfg.Data_path, 'rloc_collection.data')
             self.covered_pips = prev_rloc_collection.covered_pips.copy()
 
@@ -79,6 +80,8 @@ class RLOC_Collection:
                 TC = Config()
             else:
                 TC = util.load_data(cfg.config_path, f'TC{self.TC_idx}.data')
+        else:
+            return Config()
 
         return TC
 

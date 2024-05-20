@@ -14,7 +14,7 @@ def func(config_path, file, clock_region, site_dict, clock_region_path, pbar_2):
     # load configuration
     TC_idx = file.split('.')[0]
     TC = util.load_data(config_path, file)
-    CUTs = filter(lambda x: x.origin in clock_region.tiles, TC.D_CUTs)
+    CUTs = filter(lambda x: x.origin in clock_region.coords, TC.D_CUTs)
     CUTs = sorted(CUTs, key=lambda x: (x.index, x.get_x_coord(), x.get_y_coord()))
 
     # create a configuration for constraints
@@ -90,7 +90,7 @@ if __name__ == '__main__':
             # load configuration
             TC_idx = file.split('.')[0]
             TC = util.load_data(config_path, file)
-            CUTs = filter(lambda x: x.origin in clock_region.tiles, TC.D_CUTs)
+            CUTs = filter(lambda x: x.origin in clock_region.coords, TC.D_CUTs)
             CUTs = sorted(CUTs, key=lambda x: (x.index, x.get_x_coord(), x.get_y_coord()))
 
             # invalid cuts

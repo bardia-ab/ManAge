@@ -16,7 +16,7 @@ if __name__ == "__main__":
     device = Arch(device_name)
 
     # create relocation_storage
-    rloc_collection = RLOC_Collection(device, iteration, desired_tile)
+    rloc_collection = RLOC_Collection(device, iteration)
 
     # create and fill configurations
     for file in rloc_collection.minimal_configs:
