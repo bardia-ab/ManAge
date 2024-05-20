@@ -55,6 +55,31 @@ def get_ROs2(G: nx.DiGraph):
 
     return ROs
 
+def get_ROs3(G: nx.DiGraph):
+    G_copy = copy.deepcopy(G)
+    route_thrus = {edge for edge in G_copy.edges if cfg.LUT_in_pattern.match(edge[0])}
+    G_copy.remove_edges_from(route_thrus)
+    blocked_nodes = set()
+    ROs = []
+    sources = list(filter(lambda node: cfg.CLB_out_pattern.match(node) and nd.get_label(node) == 'C', G_copy))
+
+    for src in sources:
+        for idx in range(65, 73):
+            label = chr(idx)
+            sinks = (nd.get_LUT_input(nd.get_tile(src), label, index) for index in range(1, 7))
+            G_copy.add_edges_from(product(sinks, {'t'}))
+            try:
+                path = Path.path_finder(G_copy, src, 't', weight='weight', blocked_nodes=set(), dummy_nodes=['t'])
+                #blocked_nodes.update(path[2:])
+                blocked_edges = {edge for node in path[2:] for edge in G_copy.in_edges(node)} - set(zip(path, path[1:]))
+                G_copy.remove_edges_from(blocked_edges)
+                ROs.append(path)
+            except:
+                pass
+
+            G_copy.remove_node('t')
+
+    return ROs
 def get_antennas(G:nx.DiGraph, all_paths):
     antennas = []
     G_copy = copy.deepcopy(G)
