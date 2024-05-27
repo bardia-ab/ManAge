@@ -85,6 +85,7 @@ def get_antennas(G:nx.DiGraph, all_paths):
     G_copy = copy.deepcopy(G)
     used_nodes = {node  for path in all_paths for node in path}
     G_copy.remove_edges_from(get_in_edges(G_copy, *all_paths))
+    assert not used_nodes or {node for node in used_nodes if G_copy.in_degree(node) == 0}, "Collision Occured!!!"
 
     # remove route thrus
     route_thrus = [edge for edge in G_copy.edges if cfg.LUT_in_pattern.match(edge[0])]
@@ -100,14 +101,15 @@ def get_antennas(G:nx.DiGraph, all_paths):
     try:
         paths = [path[1:-1] for path in paths]
     except:
-        return antennas
+        paths = []
 
-    G_copy.remove_edges_from(get_in_edges(G_copy, *paths))
     G_copy.remove_nodes_from({'s', 't'})
-    antennas += paths
+    G_copy.remove_edges_from(get_in_edges(G_copy, *paths))
     used_nodes.update(node for path in paths for node in path)
+    antennas += paths
+    assert not used_nodes or {node for node in used_nodes if G_copy.in_degree(node) == 0}, "Collision Occured!!!"
 
-    sinks = list(filter(lambda x: nd.get_INT_node_mode(G_copy, x) == 'out' and nd.get_tile_type(x) == 'INT', G_copy))
+    sinks = list(filter(lambda x: nd.get_INT_node_mode(G, x) == 'out' and nd.get_tile_type(x) == 'INT', G_copy))
     while sinks:
         sinks = [node for node in sinks if node not in used_nodes]
         G_copy.add_edges_from(product({'s'}, used_nodes))
@@ -116,15 +118,35 @@ def get_antennas(G:nx.DiGraph, all_paths):
         try:
             paths = [path[1:-1] for path in paths]
         except:
-            return antennas
-
-        if paths:
-            G_copy.remove_edges_from(get_in_edges(G_copy, *paths))
             G_copy.remove_nodes_from({'s', 't'})
-            antennas += paths
-            used_nodes.update(node for path in paths for node in path)
-        else:
             break
+
+        G_copy.remove_edges_from(get_in_edges(G_copy, *paths))
+        G_copy.remove_nodes_from({'s', 't'})
+        antennas += paths
+        used_nodes.update(node for path in paths for node in path)
+        assert not used_nodes or {node for node in used_nodes if G_copy.in_degree(node) == 0}, "Collision Occured!!!"
+
+
+    while 1:
+        sources = set(
+            filter(lambda x: nd.get_INT_node_mode(G, x) == 'in' and nd.get_tile_type(x) == 'INT', G_copy))
+        unused_nodes = set(filter(lambda x: x not in used_nodes and nd.get_tile_type(x) == 'INT' and x not in sources, G_copy))
+        G_copy.add_edges_from(product({'s'}, sources))
+        G_copy.add_edges_from(product(unused_nodes, {'t'}))
+        paths = nx.node_disjoint_paths(G_copy, 's', 't')
+        try:
+            paths = [path[1:-1] for path in paths]
+        except:
+            G_copy.remove_nodes_from({'s', 't'})
+            break
+
+        G_copy.remove_edges_from(get_in_edges(G_copy, *paths))
+        G_copy.remove_nodes_from({'s', 't'})
+        antennas += paths
+        used_nodes.update(node for path in paths for node in path)
+        assert not used_nodes or {node for node in used_nodes if G_copy.in_degree(node) == 0}, "Collision Occured!!!"
+
 
     return antennas
 

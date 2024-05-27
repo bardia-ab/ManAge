@@ -66,7 +66,7 @@ def print_heatmap(input_dict, all_coords, rows, columns, store_path, filename, p
         plt.show()
 
     else:
-        plt.savefig(os.path.join(store_path, filename))
+        plt.savefig(os.path.join(store_path, filename), bbox_inches='tight')
 
     # clear the plot
     plt.clf()
@@ -86,9 +86,13 @@ def get_data_matrix(input_dict, all_coords, n_rows, n_columns):
     types = list(set(input_dict.values()))
     data = [[np.nan] * n_columns for _ in range(n_rows)]
     for coord in all_coords:
-        row = nd.get_y_coord(coord) - 1
-        column = nd.get_x_coord(coord) - 1
+        row = nd.get_y_coord(coord)
+        column = nd.get_x_coord(coord)
         type = input_dict[coord]
-        data[row][column] = types.index(type)
+        try:
+            data[row][column] = types.index(type)
+        except:
+            print(row, column, type)
+            breakpoint()
 
     return data

@@ -5,13 +5,21 @@ from typing import List, Set
 
 @dataclass
 class DeviceModel:
-    CR_tiles_dict   :   dict    = field(default_factory=dict)
-    CR_HCS_Y_dict   :   dict    = field(default_factory=dict)
-    clb_site_dict   :   dict    = field(default_factory=dict)
-    tiles           :   Set     = field(default_factory=set)
-    wires_dict      :   dict    = field(default_factory=dict)
-    pips            :   Set     = field(default_factory=set)
-    name            :   str     = field(default_factory=str)
+    CR_tiles_dict           :   dict    = field(default_factory=dict)
+    CR_HCS_Y_dict           :   dict    = field(default_factory=dict)
+    clb_site_dict           :   dict    = field(default_factory=dict)
+    tiles                   :   Set     = field(default_factory=set)
+    wires_dict              :   dict    = field(default_factory=dict)
+    pips                    :   Set     = field(default_factory=set)
+    pips_INTF_R             :   Set     = field(default_factory=set)
+    pips_INTF_L             :   Set       = field(default_factory=set)
+    pips_INT_INTF_R_PCIE4   :   Set       = field(default_factory=set)
+    pips_INT_INTF_L_PCIE4   :   Set       = field(default_factory=set)
+    pips_INT_INTF_L_TERM_GT :   Set       = field(default_factory=set)
+    pips_INT_INTF_R_TERM_GT :   Set       = field(default_factory=set)
+    pips_INT_INTF_RIGHT_TERM_IO :   Set       = field(default_factory=set)
+    pips_INT_INTF_LEFT_TERM_PSS :   Set       = field(default_factory=set)
+    name                    :   str     = field(default_factory=str)
 
 
     def parse(self, viv_rpt_path):
@@ -44,14 +52,59 @@ class DeviceModel:
             line = next(filter(lambda x: x.startswith('Pips=INT_X'), lines))
             if not self.pips:
                     pips = self.extract_pips(line)
-                    self.format_pips(pips)
+                    self.pips = self.format_pips(pips)
+
+        with open(viv_rpt_path) as lines:
+            line = next(filter(lambda x: x.startswith('Pips=INT_INTF_R_X'), lines))
+            if not self.pips_INTF_R:
+                    pips = self.extract_pips(line)
+                    self.pips_INTF_R = self.format_pips(pips)
+
+        with open(viv_rpt_path) as lines:
+            line = next(filter(lambda x: x.startswith('Pips=INT_INTF_L_X'), lines))
+            if not self.pips_INTF_L:
+                    pips = self.extract_pips(line)
+                    self.pips_INTF_L = self.format_pips(pips)
+
+        with open(viv_rpt_path) as lines:
+            line = next(filter(lambda x: x.startswith('Pips=INT_INTF_R_PCIE4_X'), lines))
+            if not self.pips_INT_INTF_R_PCIE4:
+                    pips = self.extract_pips(line)
+                    self.pips_INT_INTF_R_PCIE4 = self.format_pips(pips)
+
+        with open(viv_rpt_path) as lines:
+            line = next(filter(lambda x: x.startswith('Pips=INT_INTF_L_PCIE4_X'), lines))
+            if not self.pips_INT_INTF_L_PCIE4:
+                    pips = self.extract_pips(line)
+                    self.pips_INT_INTF_L_PCIE4 = self.format_pips(pips)
+
+        with open(viv_rpt_path) as lines:
+            line = next(filter(lambda x: x.startswith('Pips=INT_INTF_L_TERM_GT_X'), lines))
+            if not self.pips_INT_INTF_L_TERM_GT:
+                    pips = self.extract_pips(line)
+                    self.pips_INT_INTF_L_TERM_GT = self.format_pips(pips)
+
+        with open(viv_rpt_path) as lines:
+            line = next(filter(lambda x: x.startswith('Pips=INT_INTF_R_TERM_GT_X'), lines))
+            if not self.pips_INT_INTF_R_TERM_GT:
+                    pips = self.extract_pips(line)
+                    self.pips_INT_INTF_R_TERM_GT = self.format_pips(pips)
+
+        with open(viv_rpt_path) as lines:
+            line = next(filter(lambda x: x.startswith('Pips=INT_INTF_RIGHT_TERM_IO_X'), lines))
+            if not self.pips_INT_INTF_RIGHT_TERM_IO:
+                    pips = self.extract_pips(line)
+                    self.pips_INT_INTF_RIGHT_TERM_IO = self.format_pips(pips)
+
+        with open(viv_rpt_path) as lines:
+            line = next(filter(lambda x: x.startswith('Pips=INT_INTF_LEFT_TERM_PSS_X'), lines))
+            if not self.pips_INT_INTF_LEFT_TERM_PSS:
+                    pips = self.extract_pips(line)
+                    self.pips_INT_INTF_LEFT_TERM_PSS = self.format_pips(pips)
 
         self.set_pipjuncs()
         with open(viv_rpt_path) as lines:
             lines = filter(lambda x: x.startswith('Wire='), lines)
-            #Parallel(n_jobs=-1, require='sharedmem')(delayed(self.func_1)(line) for line in lines)
-            '''with concurrent.futures.ThreadPoolExecutor() as executor:
-                executor.map(self.func_1, lines)'''
 
             for line in lines:
                 wire = self.format_wire(line)
@@ -106,10 +159,13 @@ class DeviceModel:
 
         return cond_valid_tile and cond_self_loop and cond_middle_wire
 
-
-    def format_pips(self, pips):
+    @staticmethod
+    def format_pips(pips):
+        formatted_pips = set()
         for pip in pips:
-            self.pips.add(tuple(re.split('<*->+', pip)))
+            formatted_pips.add(tuple(re.split('<*->+', pip)))
+
+        return formatted_pips
 
     def format_wire(self, line):
         return tuple(line.rstrip('\n').split('=')[1].split('->'))

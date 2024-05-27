@@ -15,7 +15,7 @@ from xil_res.primitive import FF, LUT, SubLUT
 class Arch:
 
     #__slots__ = ('name', 'relocation', 'pips', 'wires_dict', 'tiles_map', 'CRs', 'G', 'pips_length_dict', 'weight')
-    def __init__(self, name: str):
+    def __init__(self, name: str, non_clb_tiles=False):
         self.name               = name.lower()
         self.pips               = set()
         self.wires_dict         = {}
@@ -24,7 +24,7 @@ class Arch:
         self.site_dict          = {}
         self.G                  = nx.DiGraph()
         self.pips_length_dict   = {}
-        self.init()
+        self.init(non_clb_tiles)
         self.weight             = weight_function(self.G, 'weight')
 
     def __repr__(self):
@@ -41,16 +41,24 @@ class Arch:
         self.__dict__.update(state)
 
 
-    def init(self):
+    def init(self, non_clb_tiles):
         device = util.load_data(cfg.load_path, f'device_{self.name}.data')
-        #self.pips = util.load_data(cfg.load_path, 'pips.data')
         self.pips = device.pips
         self.site_dict = device.clb_site_dict
-        #self.wires_dict = util.load_data(cfg.load_path, 'wires_dict.data')
         self.wires_dict = device.wires_dict
-
         self.init_tiles_map()
         self.init_CRs(device.CR_tiles_dict, device.CR_HCS_Y_dict)
+
+        if non_clb_tiles:
+            self.tiles = device.tiles
+            self.pips_INT_INTF_R = device.pips_INTF_R
+            self.pips_INT_INTF_L = device.pips_INTF_L
+            self.pips_INT_INTF_R_PCIE4 = device.pips_INT_INTF_R_PCIE4
+            self.pips_INT_INTF_L_PCIE4 = device.pips_INT_INTF_L_PCIE4
+            self.pips_INT_INTF_R_TERM_GT = device.pips_INT_INTF_R_TERM_GT
+            self.pips_INT_INTF_L_TERM_GT = device.pips_INT_INTF_L_TERM_GT
+            self.pips_INT_INTF_RIGHT_TERM_IO = device.pips_INT_INTF_RIGHT_TERM_IO
+            self.pips_INT_INTF_LEFT_TERM_PSS = device.pips_INT_INTF_LEFT_TERM_PSS
 
     def init_tiles_map(self):
         for key in self.wires_dict:
@@ -339,6 +347,19 @@ class Arch:
                 weight += 0.5
 
             self.G.get_edge_data(*edge)['weight'] = weight
+
+    def get_tile_map_type(self, coordinate):
+        if coordinate not in self.tiles_map:
+            raise ValueError(f'{coordinate}: invalid coordinate!')
+
+        if all(map(lambda x: x is not None, self.tiles_map[coordinate].values())):
+            return 'Both'
+        elif self.tiles_map[coordinate]['CLB_W'] is None:
+            return 'East'
+        elif self.tiles_map[coordinate]['CLB_E'] is None:
+            return 'West'
+        else:
+            raise ValueError(f'{list(self.tiles_map[coordinate].values())}')
 
 
 if __name__ == '__main__':
