@@ -1,6 +1,7 @@
 import networkx as nx
 from xil_res.node import Node as nd
 from xil_res.path import Path
+import utility.config as cfg
 
 class CUT:
     __slots__ = ('origin', 'index', 'main_path', 'paths', 'FFs', 'subLUTs', 'G')
@@ -75,6 +76,17 @@ class CUT:
             FF_primitive = TC.FFs[nd.get_bel(ff_node)]
             FF_primitive.set_usage(ff_node)
             self.FFs.add(FF_primitive)
+
+    def set_main_path(self):
+        try:
+            src = next(node for node in self.G if cfg.Source_pattern.match(node))
+            sink = next(node for node in self.G if cfg.Sink_pattern.match(node))
+        except StopIteration:
+            self.main_path = Path()
+            return
+
+        self.main_path = Path()
+        self.main_path. nodes = nx.shortest_path(self.G, src, sink)
 
     @staticmethod
     def conv_paths2CUT(TC, index, origin, *paths):
