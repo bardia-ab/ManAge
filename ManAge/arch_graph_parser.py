@@ -1,3 +1,4 @@
+import copy
 import os.path
 from pathlib import Path
 import sys
@@ -9,7 +10,8 @@ import utility.config as cfg
 import utility.utility_functions as util
 
 # initialize device
-device_name = sys.argv[1]
+#device_name = sys.argv[1]
+device_name = 'xczu9eg'
 desired_tile = 'INT_X46Y90'
 
 device = Arch(device_name)
@@ -58,8 +60,8 @@ latex_file = str(Path(store_path) / 'out_pipjunc_dict.txt')
 an.pipjunc_csv(out_pipjunc_dict, csv_file)
 an.pipjunc_latex(pips_dict, latex_file)'''
 
-an.get_regex('CLEM_X6Y112/CLE_CLE_M_SITE_0_E3')
-an.get_regex('CLEM_X6Y112/CLE_CLE_M_SITE_0_A3')
+#an.get_regex('CLEM_X6Y112/CLE_CLE_M_SITE_0_E3')
+#an.get_regex('CLEM_X6Y112/CLE_CLE_M_SITE_0_A3')
 
 wires_dict_regex = an.get_node_head(device.wires_dict[desired_tile], desired_tile)
 
@@ -68,5 +70,58 @@ bls = [wire for wire in device.wires_dict[desired_tile] if nd.get_tile(wire[0]) 
 
 bln_disloc = {(nd.get_x_coord(wire[1]) - nd.get_x_coord(wire[0]), nd.get_y_coord(wire[1]) - nd.get_y_coord(wire[0])) for wire in bln}
 bls_disloc = {(nd.get_x_coord(wire[1]) - nd.get_x_coord(wire[0]), nd.get_y_coord(wire[1]) - nd.get_y_coord(wire[0])) for wire in bls}
+
+SDQNODE = [wire for wire in device.wires_dict[desired_tile] if nd.get_tile(wire[0]) == desired_tile and 'SDQNODE' in wire[1]]
+INODE = [wire for wire in device.wires_dict[desired_tile] if nd.get_tile(wire[0]) == desired_tile and 'INODE' in wire[1]]
+SDQNODE_disloc = {(nd.get_x_coord(wire[1]) - nd.get_x_coord(wire[0]), nd.get_y_coord(wire[1]) - nd.get_y_coord(wire[0])) for wire in SDQNODE}
+INODE_disloc = {(nd.get_x_coord(wire[1]) - nd.get_x_coord(wire[0]), nd.get_y_coord(wire[1]) - nd.get_y_coord(wire[0])) for wire in INODE}
+
+N_nodes = len({wire for wires in device.wires_dict.values() for wire in wires})
+N_edges = len(device.pips) * len(device.get_INTs()) + len(device.get_CLBs()) * 96
+#device.get_graph()
+print(len(device.G.edges()))
+print(len(device.G.nodes()))
+
+
+###############
+device.set_compressed_graph(desired_tile)
+invalid_nodes = [node for node in device.G if nd.get_tile(node) != desired_tile]
+device.G.remove_nodes_from(invalid_nodes)
+east_nodes = [node for node in device.G if '_E_' in node]
+west_nodes = [node for node in device.G if '_W_' in node]
+
+east_G = copy.deepcopy(device.G)
+west_G = copy.deepcopy(device.G)
+
+east_G.remove_nodes_from(west_nodes)
+west_G.remove_nodes_from(east_nodes)
+
+for edge in copy.deepcopy(east_G.edges):
+    edge_1 = []
+    for node in edge:
+        if '_E_' in node:
+            node = node.replace('_E_', '_#_')
+
+        edge_1.append(node)
+
+    east_G.remove_edge(*edge)
+    east_G.add_edge(*edge_1)
+    
+removed_nodes = [node for node in east_G if east_G.in_degree(node) == east_G.out_degree(node) == 0]
+east_G.remove_nodes_from(removed_nodes)
+
+for edge in copy.deepcopy(west_G.edges):
+    edge_1 = []
+    for node in edge:
+        if '_W_' in node:
+            node = node.replace('_W_', '_#_')
+
+        edge_1.append(node)
+
+    west_G.remove_edge(*edge)
+    west_G.add_edge(*edge_1)
+
+removed_nodes = [node for node in west_G if west_G.in_degree(node) == west_G.out_degree(node) == 0]
+west_G.remove_nodes_from(removed_nodes)
 
 print('hi')

@@ -111,7 +111,7 @@ class ConstConfig:
 
     @staticmethod
     def split_D_CUTs(TC, method):
-        D_CUTs_even = [D_CUT for R_CUT in TC.CUTs for D_CUT in R_CUT.D_CUTs if ConstConfig.split_function(D_CUT, method) == 0]
-        D_CUTs_odd = [D_CUT for R_CUT in TC.CUTs for D_CUT in R_CUT.D_CUTs if ConstConfig.split_function(D_CUT, method) == 1]
+        D_CUTs_even = [D_CUT for D_CUT in TC.D_CUTs if ConstConfig.split_function(D_CUT, method) == 0]
+        D_CUTs_odd = [D_CUT for D_CUT in TC.D_CUTs if ConstConfig.split_function(D_CUT, method) == 1]
 
         return D_CUTs_even, D_CUTs_odd

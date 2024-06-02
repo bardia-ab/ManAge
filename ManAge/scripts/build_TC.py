@@ -48,6 +48,7 @@ for json_file in json_files:
         cut_index = int(re.findall('\d+', cut_name)[0])
         edges = configuration[cut_label]['edges']
         cut = CUT.conv_graph2CUT(TC, cut_index, origin, *edges)
+        #cut.set_main_path()
 
         if mode == 'minimal':
             TC.CUTs.append(cut)
