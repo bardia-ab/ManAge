@@ -361,6 +361,14 @@ class Arch:
         else:
             raise ValueError(f'{list(self.tiles_map[coordinate].values())}')
 
+    def get_device_dimension(self):
+        device_coords = {coord for CR in self.CRs for coord in CR.coords}
+        x_coords = {nd.get_x_coord(coord) for coord in device_coords}
+        y_coords = {nd.get_y_coord(coord) for coord in device_coords}
+
+        return min(x_coords), max(x_coords), min(y_coords), max(y_coords)
+
+
 
 if __name__ == '__main__':
     import os
