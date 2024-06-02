@@ -1,12 +1,14 @@
 from experiment.clock_manager import CM
 from pathlib import Path
 import os, re, math, sys
+from itertools import chain
 sys.path.append(str(Path(__file__).parent.parent))
 os.chdir(str(Path(__file__).parent.parent))
 from processing.cut_delay import CUTs_List, CUT_Delay
 from xil_res.node import Node as nd
 from constraint.configuration import ConstConfig
-from utility.utility_functions import load_data
+import utility.utility_functions as util
+import utility.config as cfg
 
 
 def pack_bytes(data, N_bytes):
@@ -221,76 +223,80 @@ def get_invalid_TCs(result_path):
 
     return TCs
 
-def fill_cuts_list(TC_result_path, TC_CUT_path, N_Parallel, TC, skew_path=None):
-    TC_idx = int(re.findall('\d+', TC)[0])
-    results_path = os.path.join(TC_result_path, TC)
-    cuts_list = fill_D_CUTs(TC_CUT_path, TC)
-
-    skew_dict = {}
-    if skew_path:
-        with open(f'{skew_path}/{TC}.txt') as file:
-            for line in file.readlines():
-                try:
-                    CUT_idx, max_skew, min_skew = line.rstrip('\n').split('\t')
-                except:
-                    print(f'********************* {line} ***************')
-                    print(TC_idx)
-                    print(skew_path)
-                    CUT_idx = line.rstrip('\n').split('\t')[0]
-                    max_skew = 0
-                    min_skew = 0
-
-                if not max_skew:
-                    max_skew = 0
-
-                if not min_skew:
-                    min_skew = 0
-
-                path_idx = int(CUT_idx.split('_')[-1]) % N_Parallel
-                seg_idx = int(CUT_idx.split('_')[-1]) // N_Parallel
-                skew_dict[(seg_idx, path_idx)] = (float(max_skew) + float(min_skew)) / 2 * 1e-9
-
-
-    for result in os.listdir(results_path):
-        segments = load_data(results_path, result)
-        for seg_idx, segment in enumerate(segments):
-            for (path_idx, path_delay) in segment:
-                D_CUT_idx = seg_idx * N_Parallel + path_idx
-                try:
-                    cut_delay = cuts_list.CUTs[D_CUT_idx]
-                except:
-                    continue
-
-                cut_delay.seg_idx = seg_idx
-                cut_delay.path_idx = path_idx
-
-                # skew
-                skew = skew_dict[(seg_idx, path_idx)] if skew_path else 0
-
-                if 'rising' in result:
-                    cut_delay.rising_delay = path_delay + skew
-                else:
-                    cut_delay.falling_delay = path_delay + skew
-
-    cuts_list.CUTs = [cut_delay for cut_delay in cuts_list.CUTs if cut_delay.rising_delay != 0 and cut_delay.falling_delay != 0]
-    return cuts_list.CUTs
-
 def fill_D_CUTs(TC_CUT_path, TC):
     cuts_list = CUTs_List([])
     TC_idx = int(re.findall('\d+', TC)[0])
     TC_label = TC.split('_')[0]
-    TC_CUT = load_data(TC_CUT_path, f'{TC_label}.data')
+    TC_CUT = util.load_data(TC_CUT_path, f'{TC_label}.data')
     if 'even' in TC:
         D_CUTs, _ = ConstConfig.split_D_CUTs(TC_CUT, 'FF_in_index')
     elif 'odd' in TC:
         _, D_CUTs = ConstConfig.split_D_CUTs(TC_CUT, 'FF_in_index')
     else:
-        D_CUTs = [D_CUT for R_CUT in TC_CUT.CUTs for D_CUT in R_CUT.D_CUTs]
+        D_CUTs = [D_CUT for D_CUT in TC_CUT.D_CUTs]
 
     D_CUTs.sort(key=lambda x: (x.index, nd.get_x_coord(x.origin), nd.get_y_coord(x.origin)))
     for D_CUT in D_CUTs:
-        edges = [edge for edge in D_CUT.G.edges if D_CUT.G.get_edge_data(*edge)['path_type'] == 'main_path']
+        #D_CUT.set_main_path()
+        edges = D_CUT.main_path.get_edges()
         cut_delay = CUT_Delay(origin=D_CUT.origin, CUT_idx=D_CUT.index, TC_idx=TC_idx, edges=edges)
         cuts_list.CUTs.append(cut_delay)
 
     return cuts_list
+
+def load_segments_delays(valid_TC_result_dir: str):
+    segments_rising = util.load_data(valid_TC_result_dir, 'segments_rising.data')
+    segments_falling = util.load_data(valid_TC_result_dir, 'segments_falling.data')
+
+    return list(chain(*segments_rising)), list(chain(*segments_falling))
+
+def load_skew(skew_path, TC):
+    skew_dict = {}
+    if skew_path is None:
+        return skew_dict
+
+    with open(f'{skew_path}/{TC}.txt') as file:
+        for line in file.readlines():
+            try:
+                CUT_idx, max_skew, min_skew = line.rstrip('\n').split('\t')
+            except:
+                print(f'** {skew_path}/{TC}.txt: {line}')
+                CUT_idx = line.rstrip('\n').split('\t')[0]
+                max_skew = 0
+                min_skew = 0
+
+            if not max_skew:
+                max_skew = 0
+
+            if not min_skew:
+                min_skew = 0
+
+            path_idx = int(CUT_idx.split('_')[-1]) % cfg.N_Parallel
+            seg_idx = int(CUT_idx.split('_')[-1]) // cfg.N_Parallel
+            skew_dict[(seg_idx, path_idx)] = (float(max_skew) + float(min_skew)) / 2 * 1e-9
+
+        return skew_dict
+
+def fill_cuts_list(TC_result_path, TC_CUT_path, TC, pbar, skew_path=None):
+    pbar.set_description(TC)
+    results_path = os.path.join(TC_result_path, TC)
+    cuts_list = fill_D_CUTs(TC_CUT_path, TC)
+
+    # load segments
+    segments_rising, segments_falling = load_segments_delays(results_path)
+
+    # load skew
+    skew_dict = load_skew(skew_path, TC)
+
+    for D_CUT_idx, D_CUT in enumerate(cuts_list.CUTs):
+        D_CUT.path_idx = D_CUT_idx % cfg.N_Parallel
+        D_CUT.seg_idx = D_CUT_idx // cfg.N_Parallel
+        skew = skew_dict[(D_CUT.seg_idx, D_CUT.path_idx)] if skew_dict else 0
+
+        D_CUT.rising_delay = segments_rising[D_CUT_idx][1] - skew
+        D_CUT.falling_delay = segments_falling[D_CUT_idx][1] - skew
+
+    pbar.update(1)
+
+    cuts_list.CUTs = [cut_delay for cut_delay in cuts_list.CUTs if cut_delay.rising_delay != 0 and cut_delay.falling_delay != 0]
+    return cuts_list.CUTs
