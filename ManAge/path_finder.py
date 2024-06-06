@@ -44,6 +44,7 @@ if __name__ == "__main__":
         else:
             if Empty_TC:
                 device.reset_costs(test_collection)
+                device.reform_cost()
                 Empty_TC = True
             else:
                 break
@@ -51,5 +52,6 @@ if __name__ == "__main__":
         # reset weights
         if (test_collection.n_pips - len(test_collection.queue) // test_collection.n_pips) > 0.3:
             device.reset_costs(test_collection)
+            device.reform_cost()
 
     util.store_data(cfg.minimal_config_path, 'test_collection.data', test_collection)
