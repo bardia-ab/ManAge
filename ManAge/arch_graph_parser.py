@@ -9,6 +9,28 @@ import arch.analysis as an
 import utility.config as cfg
 import utility.utility_functions as util
 
+material_palette = [
+    "#03A9F4",  # Light Blue
+    "#E91E63",  # Pink
+    "#FFC107",  # Amber
+    "#8BC34A",  # Light Green
+    "#9C27B0",  # Purple
+    "#673AB7",  # Deep Purple
+    "#3F51B5",  # Indigo
+    "#F44336",  # Red
+    "#2196F3",  # Blue
+    "#00BCD4",  # Cyan
+    "#009688",  # Teal
+    "#4CAF50",  # Green
+    "#CDDC39",  # Lime
+    "#FFEB3B",  # Yellow
+    "#FF9800",  # Orange
+    "#FF5722",  # Deep Orange
+    "#795548",  # Brown
+    "#9E9E9E",  # Grey
+    "#607D8B"   # Blue Grey
+]
+
 # initialize device
 #device_name = sys.argv[1]
 device_name = 'xczu9eg'
@@ -21,22 +43,22 @@ store_path = Path(cfg.Data_path) / 'Analysis'
 store_path.mkdir(exist_ok=True)
 store_path = str(store_path)
 
-'''# draw tiles_map heatmap
-parsed_tiles_map = an.parse_tiles_map(device.tiles_map)
-filename = 'tiles_map'
-plot.print_heatmap_tiles_map(parsed_tiles_map, store_path=store_path, filename=filename)
-'''
+# draw tiles_map heatmap
+'''parsed_tiles_map = an.parse_tiles_map(device.tiles_map)
+filename = 'tiles_map.pdf'
+plot.print_heatmap_tiles_map(parsed_tiles_map, store_path=store_path, filename=filename, palette=material_palette)'''
 
-'''# draw wires_dict heatmap
+
+# draw wires_dict heatmap
 parsed_wires_dict = an.parse_wires_dict(device.wires_dict)
-filename = 'wires_dict'
-plot.print_heatmap_wires_dict(parsed_wires_dict, store_path=store_path, filename=filename)
-'''
+filename = 'wires_dict.pdf'
+plot.print_heatmap_wires_dict(parsed_wires_dict, store_path=store_path, filename=filename, palette=material_palette)
+
 
 '''slice_type = an.parse_slice_types(device.get_CLBs(), device.site_dict)
-filename = 'slice_type'
-plot.print_heatmap_tiles_map(slice_type, store_path=store_path, filename=filename)
-'''
+filename = 'slice_type.pdf'
+plot.print_heatmap_tiles_map(slice_type, store_path=store_path, filename=filename, palette=material_palette)'''
+
 # Intent Code Names
 #intent_code_path = r'C:\Users\t26607bb\Desktop\Practice\Arch_graph\Intent_Code_Names'
 '''nodes_dict = an.read_intent_code_files(intent_code_path)
