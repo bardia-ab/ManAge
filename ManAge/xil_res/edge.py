@@ -92,6 +92,10 @@ class PIP(Edge):
                               }
                 block_nodes.update(TC.filter_nodes(**attributes))
 
+            if nd.get_clb_node_type(self.pred_u) == 'CLB_out':
+                block_nodes.update(TC.filter_nodes(get_clb_node_type='CLB_out'))
+                block_nodes = block_nodes - {self.pred_u}
+
         if LUT_primitive is None:
             block_nodes.update(filter(cfg.LUT_in_pattern.match, TC.G))
         else:

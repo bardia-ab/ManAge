@@ -51,14 +51,17 @@ class Arch:
 
         if non_clb_tiles:
             self.tiles = device.tiles
-            self.pips_INT_INTF_R = device.pips_INTF_R
-            self.pips_INT_INTF_L = device.pips_INTF_L
-            self.pips_INT_INTF_R_PCIE4 = device.pips_INT_INTF_R_PCIE4
-            self.pips_INT_INTF_L_PCIE4 = device.pips_INT_INTF_L_PCIE4
-            self.pips_INT_INTF_R_TERM_GT = device.pips_INT_INTF_R_TERM_GT
-            self.pips_INT_INTF_L_TERM_GT = device.pips_INT_INTF_L_TERM_GT
-            self.pips_INT_INTF_RIGHT_TERM_IO = device.pips_INT_INTF_RIGHT_TERM_IO
-            self.pips_INT_INTF_LEFT_TERM_PSS = device.pips_INT_INTF_LEFT_TERM_PSS
+            try:
+                self.pips_INT_INTF_R = device.pips_INTF_R
+                self.pips_INT_INTF_L = device.pips_INTF_L
+                self.pips_INT_INTF_R_PCIE4 = device.pips_INT_INTF_R_PCIE4
+                self.pips_INT_INTF_L_PCIE4 = device.pips_INT_INTF_L_PCIE4
+                self.pips_INT_INTF_R_TERM_GT = device.pips_INT_INTF_R_TERM_GT
+                self.pips_INT_INTF_L_TERM_GT = device.pips_INT_INTF_L_TERM_GT
+                self.pips_INT_INTF_RIGHT_TERM_IO = device.pips_INT_INTF_RIGHT_TERM_IO
+                self.pips_INT_INTF_LEFT_TERM_PSS = device.pips_INT_INTF_LEFT_TERM_PSS
+            except:
+                pass
 
     def init_tiles_map(self):
         for key in self.wires_dict:

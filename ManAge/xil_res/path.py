@@ -318,7 +318,7 @@ class PathOut(Path):
 
                 try:
                     path = self.path_finder(TC.G, path[0], self.sink, **attr)
-                    self.nodes = path
+                    #self.nodes = path
                 except nx.NetworkXNoPath:
                     path = []
 
@@ -469,12 +469,16 @@ class MainPath(Path):
         self.path_in = next(path for path in paths if path.type == 'path_in')
         self.path_out = next(path for path in paths if path.type == 'path_out')
         self.nodes = self.path_in.nodes + self.path_out.nodes
-        self.error = not(self.validate_buffers())
+        self.error = not(self.validate_buffers(TC))
 
-    def validate_buffers(self):
+    def validate_buffers(self, TC):
         result = False
         if len(list(filter(lambda node: cfg.CLB_out_pattern.match(node), self.nodes))) <= 1:
             result = True
+        else:
+            edges = [edge for edge in self.get_edges() if any(map(lambda node: cfg.CLB_out_pattern.match(node), edge))]
+            for edge in edges:
+                TC.G.get_edge_data(*edge)['weight'] += 25
 
         return result
 
