@@ -1,6 +1,5 @@
-import sys
+import sys, shutil
 from pathlib import Path
-sys.path.append(str(Path(__file__).parent.parent))
 import utility.utility_functions as util
 import utility.config as cfg
 
@@ -14,3 +13,8 @@ util.create_folder(cfg.test_result_path)
 util.create_folder(cfg.bitstream_path)
 util.create_folder(cfg.dcp_path)
 util.create_folder(cfg.log_path)
+
+model_path = Path(__file__).absolute().parent.parent / 'models'
+for file in model_path.glob('*'):
+    dst = Path(cfg.load_path) / file.name
+    shutil.copy(file, dst)
