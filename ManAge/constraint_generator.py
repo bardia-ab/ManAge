@@ -82,9 +82,6 @@ if __name__ == '__main__':
             configuration_files)'''
 
         for file in configuration_files:
-            if file != 'TC26.data' or clock_region.name != 'X2Y2':
-                continue
-
             pbar_2.set_postfix(Configuration=file)
 
             # load configuration
