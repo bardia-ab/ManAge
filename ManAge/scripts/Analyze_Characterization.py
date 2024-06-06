@@ -25,8 +25,8 @@ for iter in iterations:
     pbar.set_description(iter.stem)
     pbar.set_postfix_str('CUTs List')
     store_file = Path(store_path) / iter.name / file_name
-    script = str(Path(__file__).parent.parent / 'processing' / 'result_process.py')
-    #subprocess.run([cfg.python, script, TCs_path, str(iter), str(skew_path), store_file], capture_output=True, text=True, encoding='utf-8')
+    script = str(Path(__file__).parent.parent / 'processing' / 'populate_cut_delays.py')
+    subprocess.run([cfg.python, script, TCs_path, str(iter), str(skew_path), store_file], capture_output=True, text=True, encoding='utf-8')
 
     # create heatmap
     pbar.set_postfix_str('Heatmap')
@@ -39,16 +39,16 @@ for iter in iterations:
     ymin = str(ymin)
     ymax = str(ymax)
     script = str(Path(__file__).parent.parent / 'processing' / 'delay_heatmap.py')
-    #subprocess.run([cfg.python, script, cuts_list_file, heatmap_store_path, store_file_suffix, xmin, xmax, ymin, ymax], capture_output=True,
-                   #text=True, encoding='utf-8')
+    subprocess.run([cfg.python, script, cuts_list_file, heatmap_store_path, store_file_suffix, xmin, xmax, ymin, ymax], capture_output=True,
+                   text=True, encoding='utf-8')
 
     # create diff heatmap
     pbar.set_postfix_str('Difference Heatmap')
     ref_cuts_list_file = Path(store_path) / 'iter0' / file_name
     heatmap_store_path = Path(cuts_list_file).parent.parent.parent / 'heatmap_diff' / iter.name
     script = str(Path(__file__).parent.parent / 'processing' / 'diff_delay_heatmap.py')
-    #subprocess.run([cfg.python, script, ref_cuts_list_file, cuts_list_file, heatmap_store_path, store_file_suffix, xmin, xmax, ymin, ymax],
-                   #capture_output=True, text=True, encoding='utf-8')
+    subprocess.run([cfg.python, script, ref_cuts_list_file, cuts_list_file, heatmap_store_path, store_file_suffix, xmin, xmax, ymin, ymax],
+                   capture_output=True, text=True, encoding='utf-8')
 
     # compare ageing
     ref_cuts_list_file = Path(store_path) / 'iter0' / file_name
