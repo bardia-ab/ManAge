@@ -1,8 +1,7 @@
 import yaml, platform, os, re, sys
 from pathlib import Path
-if not (Path(os.getcwd()).parts[-1] == Path(os.getcwd()).parts[-2] == 'ManAge'):
-    sys.path.append(str(Path(__file__).parent.parent))
-    os.chdir(str(Path(__file__).parent.parent))
+sys.path.append(str(Path(__file__).absolute().parent.parent))
+os.chdir(str(Path(__file__).absolute().parent.parent))
 
 with open('config.yaml', 'r') as file:
     config = yaml.safe_load(file)
@@ -84,3 +83,6 @@ N_Parallel = config['Constraints']['N_Parallel']
 
 ##### python
 python = 'python' if platform.system() == 'Windows' else 'python3'
+
+##### parallel
+n_jobs = config['Parallel']['n_jobs']
