@@ -2,10 +2,14 @@ from experiment.clock_manager import CM
 from pathlib import Path
 import os, re, math, sys
 from itertools import chain
+import pandas as pd
+from joblib import Parallel, delayed
 sys.path.append(str(Path(__file__).parent.parent))
 os.chdir(str(Path(__file__).parent.parent))
 from processing.cut_delay import CUTs_List, CUT_Delay
+from xil_res.edge import Edge
 from xil_res.node import Node as nd
+import arch.analysis as an
 from constraint.configuration import ConstConfig
 import utility.utility_functions as util
 import utility.config as cfg
@@ -300,3 +304,66 @@ def fill_cuts_list(TC_result_path, TC_CUT_path, TC, pbar, skew_path=None):
 
     cuts_list.CUTs = [cut_delay for cut_delay in cuts_list.CUTs if cut_delay.rising_delay != 0 and cut_delay.falling_delay != 0]
     return cuts_list.CUTs
+
+def conv_cuts_list2df(cuts_list):
+    results = Parallel(n_jobs=cfg.n_jobs, require='sharedmem')(delayed(vars)(cut) for cut in cuts_list.CUTs)
+    df = pd.DataFrame(results)
+
+    return df
+
+def merge_df(ref_df, df):
+    # Merge DataFrames to Get Common Rows
+    common_rows = ref_df.merge(df, on=['origin', 'CUT_idx', 'TC_idx'], how='inner')[['origin', 'CUT_idx', 'TC_idx']]
+
+    # Filter Both DataFrames Based on Common Rows
+    filtered_ref_df = ref_df.merge(common_rows, on=['origin', 'CUT_idx', 'TC_idx'], how='inner')
+    filtered_df = df.merge(common_rows, on=['origin', 'CUT_idx', 'TC_idx'], how='inner')
+
+    return filtered_ref_df, filtered_df
+
+def add_incr_delay_columns(ref_df, df, rising_column, falling_column):
+    # Calculate the percentage increase for 'rising_delay' and 'falling_delay'
+    df[rising_column] = ((df['rising_delay'] - ref_df['rising_delay']) / ref_df['rising_delay']) * 100
+    df[falling_column] = ((df['falling_delay'] - ref_df['falling_delay']) / ref_df['falling_delay']) * 100
+
+    return df
+
+def get_aged_df(df, incr_column, removed_columns):
+    df = df.drop(columns=removed_columns)
+    df = df[df[incr_column] > 0]
+    df.sort_values(by=incr_column, ascending=False)
+    return df
+
+def get_edge_type_regex_freq_dict(df):
+    edges = [edge for edges in df['edges'] for edge in edges]
+
+    # filter pips
+    edges = list(filter(lambda e: Edge(e).get_type() == 'pip', edges))
+
+    # remove tile names
+    edges = [tuple(map(lambda node: nd.get_port(node), edge)) for edge in edges]
+
+    edge_freq_dict = {}
+    for edge in edges:
+        if 'LOGIC_OUTS' in edge[0] or 'BYPASS' in edge[1] or 'BOUNCE' in edge[1]:
+            continue
+
+        regex_edge = (an.get_regex(edge[0]), an.get_regex(edge[1]))
+
+        if regex_edge not in edge_freq_dict:
+            edge_freq_dict[regex_edge] = 1
+        else:
+            edge_freq_dict[regex_edge] += 1
+
+    return edge_freq_dict
+
+def filter_above_threshold(df, thresh_value, column='rising_delay_increase_%'):
+    # thresh_value is between 0 and 1
+
+    # Calculate the threshold for the highest thresh_value %
+    threshold = df[column].quantile(1 - thresh_value)
+
+    # Filter the DataFrame to get rows with rising_delay_increase_% above the threshold
+    filtered_df = df[df[column] >= threshold]
+
+    return filtered_df

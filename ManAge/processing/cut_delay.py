@@ -50,7 +50,7 @@ class CUTs_List:
         # get coord_cut_dict
         coord_cut_dict = self.get_coord_cut_dict()
 
-        results = Parallel(n_jobs=4)(
+        results = Parallel(n_jobs=1)(
             delayed(self.get_average_delay)(coord, cuts) for coord, cuts in coord_cut_dict.items()
         )
 
