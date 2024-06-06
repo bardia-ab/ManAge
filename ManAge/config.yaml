@@ -1,6 +1,6 @@
 Windows:
   arch_graph_path     : C:\Users\t26607bb\Desktop\graph_zcu9eg
-  Data_path           : C:\Users\t26607bb\Desktop\CPS_Project\Path_Search\Data_xczu9eg_RO
+  Data_path           : C:\Users\t26607bb\Desktop\CPS_Project\Path_Search\Data_xczu9eg
   vivado_project_path : C:\Users\t26607bb\Desktop\Practice\CPS_ZCU104\vivado_proj
 
 Linux:
@@ -61,3 +61,6 @@ Constraints:
   not_LUT_cell_name : not_LUT
   buff_LUT_cell     : Buff_Gen.buffer_LUT
   N_Parallel        : 50
+
+Parallel:
+  n_jobs            : 4
