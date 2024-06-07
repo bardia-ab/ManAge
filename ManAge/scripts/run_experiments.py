@@ -22,7 +22,7 @@ results_path.mkdir(parents=True)
 
 # Setup pbar
 CRs = sorted(os.listdir(bitstream_path), key=lambda x: int(re.findall('\d+', x)[0]))
-pbar = tqdm(total=len(CRs))
+pbar = tqdm(total=len([file for file in bitstream_path.rglob('*.bit')]))
 
 for CR in CRs:
 
@@ -50,4 +50,4 @@ for CR in CRs:
             print("Error:", result.stderr)
             exit()
 
-    pbar.update(1)
+        pbar.update(1)
