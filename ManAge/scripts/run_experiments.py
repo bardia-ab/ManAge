@@ -32,7 +32,7 @@ for CR in CRs:
     CR_vivado_srcs_path = Path(vivado_srcs_path) / CR
 
     # Create a Folder for CR in vivado_srcs_path
-    util.create_folder(CR_results_path)
+    CR_results_path.mkdir(parents=True)
 
     # Retrieve Bitstreams
     TCs = CR_bitstream_path.glob('TC*')
