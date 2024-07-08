@@ -1,9 +1,8 @@
 import os, sys, json
 import re
 from pathlib import Path
-if not (Path(os.getcwd()).parts[-1] == Path(os.getcwd()).parts[-2] == 'ManAge'):
-    sys.path.append(str(Path(__file__).parent.parent))
-    os.chdir(str(Path(__file__).parent.parent))
+sys.path.append(str(Path(__file__).absolute().parent.parent))
+os.chdir(str(Path(__file__).absolute().parent.parent))
 
 from tqdm import tqdm
 from xil_res.architecture import Arch
@@ -21,6 +20,9 @@ mode = sys.argv[4]
 
 # create device
 device = Arch(device_name)
+
+# create store path
+Path(store_path).mkdir(parents=True, exist_ok=True)
 
 #retrieve JSON files
 json_files = list(Path(json_path).glob('*.json'))
@@ -48,7 +50,7 @@ for json_file in json_files:
         cut_index = int(re.findall('\d+', cut_name)[0])
         edges = configuration[cut_label]['edges']
         cut = CUT.conv_graph2CUT(TC, cut_index, origin, *edges)
-        #cut.set_main_path()
+        cut.set_main_path()
 
         if mode == 'minimal':
             TC.CUTs.append(cut)
@@ -60,7 +62,7 @@ for json_file in json_files:
     TC.LUTs = list(TC.filter_LUTs(usage='used'))
     TC.subLUTs = list(TC.filter_subLUTs(usage='used'))
 
-
+    # store
     output_file = f'{Path(json_file).stem}.data'
     util.store_data(store_path, output_file, TC)
 

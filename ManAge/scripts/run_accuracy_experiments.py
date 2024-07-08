@@ -7,28 +7,32 @@ import utility.config as cfg
 
 
 N_Parallel          = 1
-COM_port            = 'COM6'
+COM_port            = 'COM5'
 baud_rate           = 230400
-bitstream_path      = r"C:\Users\t26607bb\Desktop\Practice\CPS_ZCU104\CPS_Accuracy_ZCU104\sweep_counters"
-store_path = r'C:\Users\t26607bb\Desktop\Practice\CPS_ZCU104\CPS_Accuracy_ZCU104\Results\500'
-load_delays         = 1
-
-# retrieve bit files
-bit_files = list(Path(bitstream_path).glob('*.bit'))
+bitstream_path      = r"C:\Users\t26607bb\Desktop\Practice\Thesis_Experiments\CPS_Accuracy_ZCU104\sweep_counters"
+store_path = r'C:\Users\t26607bb\Desktop\Practice\Thesis_Experiments\CPS_Accuracy_ZCU104\Results\500'
+load_delays         = 0
 
 # pbar
-pbar = tqdm(total=len(bit_files))
+pbar = tqdm(total=len(list(Path(bitstream_path).rglob('*.bit'))))
 
-script = Path(__file__).parent.parent / 'run_accuracy_experiment.py'
-for bit_file_name in bit_files:
-    pbar.set_description(bit_file_name.name)
-    #os.system(f'{cfg.python} "{script}" {N_Parallel} {COM_port} {baud_rate} {bitstream_path} {bit_file_name.stem} {store_path}')
-    #subprocess.run([cfg.python, script, str(N_Parallel), COM_port, str(baud_rate), bitstream_path, bit_file_name.stem, store_path], capture_output=False, text=True)
-    command = f'{cfg.python} "{script}" {N_Parallel} {COM_port} {baud_rate} {bitstream_path} {bit_file_name.stem} {store_path} {load_delays}'
-    result = subprocess.run(command, shell=True, capture_output=True, text=True)
+for iter_dir in Path(bitstream_path).glob('*'):
+    if iter_dir.stem == '500':
+        continue
 
-    # Check for errors
-    if result.returncode != 0:
-        print("Error:", result.stderr)
+    # retrieve bit files
+    bit_files = list(Path(iter_dir).glob('*.bit'))
 
-    pbar.update(1)
+    script = Path(__file__).parent.parent / 'run_accuracy_experiment.py'
+    for bit_file_name in bit_files:
+        pbar.set_description(f'Iter: {iter_dir.stem} >> {bit_file_name.name}')
+        #os.system(f'{cfg.python} "{script}" {N_Parallel} {COM_port} {baud_rate} {bitstream_path} {bit_file_name.stem} {store_path}')
+        #subprocess.run([cfg.python, script, str(N_Parallel), COM_port, str(baud_rate), bitstream_path, bit_file_name.stem, store_path], capture_output=False, text=True)
+        command = f'{cfg.python} "{script}" {N_Parallel} {COM_port} {baud_rate} {iter_dir} {bit_file_name.stem} {store_path} {load_delays}'
+        result = subprocess.run(command, shell=True, capture_output=True, text=True)
+
+        # Check for errors
+        if result.returncode != 0:
+            print("Error:", result.stderr)
+
+        pbar.update(1)

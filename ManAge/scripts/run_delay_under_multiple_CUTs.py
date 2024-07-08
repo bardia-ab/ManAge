@@ -16,7 +16,7 @@ COM_port = 'COM6'
 N_Parallel = 50
 
 # Required Directories
-Data_path           = r'C:\Users\t26607bb\Desktop\Practice\Thesis_Experiments\run_delay_under_multiple_CUTs\Data'
+Data_path           = r'C:\Users\t26607bb\Desktop\Practice\Thesis_Experiments\run_delay_under_multiple_CUTs'
 bitstream_path      = Path(Data_path) / 'Bitstreams'            # program
 results_path        = Path(Data_path) / 'Results'               # store
 vivado_srcs_path    = Path(Data_path) / 'Vivado_Sources'        # validation
@@ -48,7 +48,7 @@ for TC in TCs:
     tcl_script = Path('tcl') / 'program.tcl'
     bitstream_file = Path(bitstream_path) / TC.stem
     command = f'vivado -mode batch -nolog -nojournal -source {tcl_script} -tclargs "{bitstream_file}"'
-    result = subprocess.run(command, shell=True, capture_output=True, text=True)
+    result = subprocess.run(command, shell=True, capture_output=False, text=True)
 
     # Check for errors
     if result.returncode != 0:
