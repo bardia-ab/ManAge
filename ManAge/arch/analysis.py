@@ -247,7 +247,7 @@ def get_regex(node: str) -> str:
 
     regexp = re.sub(r'(?<!EE|NN|SS|WW)(?<!\d)\d+', '#', node)
     regexp = re.sub(r'(?<!SITE_#)_[EW]_', '_[EW]_', regexp)
-    regexp = re.sub('_[EW]#', '_[EW]#', regexp)
+    regexp = re.sub('(?<!SITE_#)_[EW]#', '_[EW]#', regexp)
     regexp = re.sub('_(BLN|BLS)_', '_(BLN|BLS)_', regexp)
     regexp = regexp.replace('#', '\d+')
     regexp = re.sub(r'SITE_\\d\+_[A-H]', 'SITE_0_[A-H]', regexp)
@@ -266,6 +266,86 @@ def draw_node_sub_graph(G, node):
     node_labels = {node: node for node in G1.nodes()}  # Assuming node labels are the same as node identifiers
     nx.draw_networkx_labels(G1, pos, labels=node_labels, font_size=10, font_color="black")
     plt.show()
+
+def get_pip_df(pips):
+    pips_dict = get_pips_dict(pips)
+    sort_pips_dict(pips_dict)
+
+    in_pipjunc_dict = filter_pips_dict(pips_dict, 'downstream')
+    out_pipjunc_dict = filter_pips_dict(pips_dict, 'upstream')
+    both_pipjunc_dict = filter_pips_dict(pips_dict, 'both')
+
+    pipjuncs = {**in_pipjunc_dict, **out_pipjunc_dict, **both_pipjunc_dict}
+    pipjuncs = {k: pipjuncs[k] for k in sorted(pipjuncs)}
+
+    columns = ['Order', 'PIP Junction', 'Uphill PIPs', 'Downhill PIPs']
+    df = pd.DataFrame(columns=columns)
+    for idx, pipjunc in enumerate(pipjuncs):
+        df.at[idx, 'Order'] = idx + 1
+        df.at[idx, 'PIP Junction'] = pipjunc
+        if pipjuncs[pipjunc]['US']:
+            if df.at[idx, 'Uphill PIPs'] is np.nan:
+                indexes = []
+                for wire_seg in pipjuncs[pipjunc]['US']:
+                    indexes.append(list(pipjuncs.keys()).index(wire_seg) + 1)
+
+                df.at[idx, 'Uphill PIPs'] = indexes.copy()
+            else:
+                indexes = []
+                for wire_seg in pipjuncs[pipjunc]['US']:
+                    indexes.append(list(pipjuncs.keys()).index(wire_seg) + 1)
+
+                df.at[idx, 'Uphill PIPs'].extend(indexes)
+
+        if pipjuncs[pipjunc]['DS']:
+            if df.at[idx, 'Downhill PIPs'] is np.nan:
+                indexes = []
+                for wire_seg in pipjuncs[pipjunc]['DS']:
+                    indexes.append(list(pipjuncs.keys()).index(wire_seg) + 1)
+                df.at[idx, 'Downhill PIPs'] = indexes.copy()
+            else:
+                indexes = []
+                for wire_seg in pipjuncs[pipjunc]['DS']:
+                    indexes.append(list(pipjuncs.keys()).index(wire_seg) + 1)
+                df.at[idx, 'Downhill PIPs'].extend(indexes)
+
+    return df
+
+def list_to_string(value):
+    # Function to convert lists into comma-separated strings with handling long lists
+    if isinstance(value, list):
+        items = ', '.join(map(str, value))
+        if len(value) > 10:
+            midpoint = len(items) // 2
+            split_point = items.find(',', midpoint)  # Find the comma near the midpoint
+            if split_point != -1:
+                return items[:split_point] + ',\\\\' + items[split_point + 1:]
+        return items
+    return value
+
+
+def escape_latex(value):
+    # Escape special LaTeX characters
+    if isinstance(value, str):
+        return value.replace('\\', '\\textbackslash ').replace('_', '\\_').replace('%', '\\%').replace('$', '\\$')
+    return value
+
+
+def get_pips_latex(df, latex_file):
+    # Replace NaN values with '-'
+    df = df.fillna('-')
+
+    # Apply formatting functions
+    df = df.applymap(list_to_string)
+
+    df = df.applymap(escape_latex)
+
+    # Convert DataFrame to LaTeX table
+    latex_table = df.to_latex(index=False, escape=False)
+
+    # Writing to a LaTeX file
+    with open(latex_file, 'w') as f:
+        f.write(latex_table)
 
 if __name__ == '__main__':
     from xil_res.architecture import Arch
