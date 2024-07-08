@@ -24,5 +24,5 @@ while {$iter < $cycle} {
 	puts $file "$temp,[clock format $systemTime -format %H:%M:%S]"
 	after 1000
 	close $file
-	incr i
+	incr iter
 }
