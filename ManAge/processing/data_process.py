@@ -289,6 +289,11 @@ def fill_cuts_list(TC_result_path, TC_CUT_path, TC, pbar, skew_path=None):
     # load segments
     segments_rising, segments_falling = load_segments_delays(results_path)
 
+    if len(cuts_list.CUTs) != len(segments_rising):
+        CR = TC_CUT_path.split("\\")[-1]
+        print(f'{CR}: {TC}')
+        return []
+
     # load skew
     skew_dict = load_skew(skew_path, TC)
 
@@ -297,7 +302,11 @@ def fill_cuts_list(TC_result_path, TC_CUT_path, TC, pbar, skew_path=None):
         D_CUT.seg_idx = D_CUT_idx // cfg.N_Parallel
         skew = skew_dict[(D_CUT.seg_idx, D_CUT.path_idx)] if skew_dict else 0
 
-        D_CUT.rising_delay = segments_rising[D_CUT_idx][1] - skew
+        try:
+            D_CUT.rising_delay = segments_rising[D_CUT_idx][1] - skew
+        except:
+            breakpoint()
+
         D_CUT.falling_delay = segments_falling[D_CUT_idx][1] - skew
 
     pbar.update(1)
@@ -334,21 +343,27 @@ def get_aged_df(df, incr_column, removed_columns):
     df.sort_values(by=incr_column, ascending=False)
     return df
 
-def get_edge_type_regex_freq_dict(df):
+def get_edge_type_regex_freq_dict(df, type='pip'):
     edges = [edge for edges in df['edges'] for edge in edges]
 
     # filter pips
-    edges = list(filter(lambda e: Edge(e).get_type() == 'pip', edges))
+    edges = list(filter(lambda e: Edge(e).get_type() == type, edges))
 
     # remove tile names
-    edges = [tuple(map(lambda node: nd.get_port(node), edge)) for edge in edges]
+    #edges = [tuple(map(lambda node: nd.get_port(node), edge)) for edge in edges]
 
     edge_freq_dict = {}
     for edge in edges:
-        if 'LOGIC_OUTS' in edge[0] or 'BYPASS' in edge[1] or 'BOUNCE' in edge[1]:
+        if type == 'pip' and ('LOGIC_OUTS' in edge[0] or 'BYPASS' in edge[1] or 'BOUNCE' in edge[1]):
             continue
+        elif type == 'wire' and (nd.get_clb_node_type(edge[0]) == 'FF_out' or nd.get_clb_node_type(edge[1]) == 'FF_in'):
+            continue
+        elif any(map(lambda x: nd.get_port(x).startswith('CLE'), edge)):
+            regex_edge = 'Route Thru'
+        else:
+            regex_edge = (an.get_regex(edge[0]), an.get_regex(edge[1]))
 
-        regex_edge = (an.get_regex(edge[0]), an.get_regex(edge[1]))
+        regex_edge = tuple(map(lambda x: nd.get_port(x), regex_edge)) if regex_edge != 'Route Thru' else 'Route Thru'
 
         if regex_edge not in edge_freq_dict:
             edge_freq_dict[regex_edge] = 1
@@ -356,6 +371,20 @@ def get_edge_type_regex_freq_dict(df):
             edge_freq_dict[regex_edge] += 1
 
     return edge_freq_dict
+
+def get_node_type_regex_freq_dict(df):
+    nodes = {nd.get_port(node) for edges in df['edges'] for edge in edges for node in edge}
+
+    node_freq_dict = {}
+    for node in nodes:
+        regex_node = an.get_regex(node)
+
+        if regex_node not in node_freq_dict:
+            node_freq_dict[regex_node] = 1
+        else:
+            node_freq_dict[regex_node] += 1
+
+    return node_freq_dict
 
 def filter_above_threshold(df, thresh_value, column='rising_delay_increase_%'):
     # thresh_value is between 0 and 1

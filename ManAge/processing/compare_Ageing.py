@@ -47,12 +47,27 @@ falling_ageing_list = falling_aged_df['falling_delay_increase_%']
 falling_histogram_file = str(Path(store_path) / f'falling_{Path(file_name).with_suffix(".pdf")}')
 plot_ageing_hist(falling_ageing_list, falling_histogram_file)
 
+edge_type_dict = {}
+for i, row in df.iterrows():
+    for edge in row['edges']:
+        if Edge(edge).get_type() == 'wire':
+            continue
+
+        type = (an.get_regex(nd.get_port(edge[0])), an.get_regex(nd.get_port(edge[1])))
+        if type not in edge_type_dict:
+            edge_type_dict[type] = 1
+        else:
+            edge_type_dict[type] += 1
+
+
 # Aged edges frequency
 rising_aged_edge_freq_dict = get_edge_type_regex_freq_dict(rising_aged_df)
+rising_aged_edge_freq_dict = {k: v / edge_type_dict[k] for k, v in rising_aged_edge_freq_dict.items()}
 store_file = str(Path(store_path) / f'rising_aged_edges_{Path(file_name).with_suffix(".pdf")}')
 plot_edge_type_bar(rising_aged_edge_freq_dict, store_file)
 
 falling_aged_edge_freq_dict = get_edge_type_regex_freq_dict(falling_aged_df)
+falling_aged_edge_freq_dict = {k: v / edge_type_dict[k] for k, v in falling_aged_edge_freq_dict.items()}
 store_file = str(Path(store_path) / f'falling_aged_edges_{Path(file_name).with_suffix(".pdf")}')
 plot_edge_type_bar(falling_aged_edge_freq_dict, store_file)
 
@@ -62,10 +77,12 @@ falling_max_10_percent_aged_df = filter_above_threshold(df, 0.1, column='falling
 
 # 10 % Aged edges frequency
 rising_max_10_percent_edge_freq_dict = get_edge_type_regex_freq_dict(rising_max_10_percent_aged_df)
+rising_max_10_percent_edge_freq_dict = {k: v / edge_type_dict[k] for k, v in rising_max_10_percent_edge_freq_dict.items()}
 store_file = str(Path(store_path) / f'rising_aged_edges_10_percent_{Path(file_name).with_suffix(".pdf")}')
 plot_edge_type_bar(rising_max_10_percent_edge_freq_dict, store_file)
 
 falling_max_10_percent_edge_freq_dict = get_edge_type_regex_freq_dict(falling_max_10_percent_aged_df)
+falling_max_10_percent_edge_freq_dict = {k: v / edge_type_dict[k] for k, v in falling_max_10_percent_edge_freq_dict.items()}
 store_file = str(Path(store_path) / f'falling_aged_edges_10_percent_{Path(file_name).with_suffix(".pdf")}')
 plot_edge_type_bar(falling_max_10_percent_edge_freq_dict, store_file)
 
@@ -73,5 +90,9 @@ plot_edge_type_bar(falling_max_10_percent_edge_freq_dict, store_file)
 rising_file_name = f'rising_{file_name}'
 util.store_data(store_path, rising_file_name, rising_aged_df)
 
-falling_file_name = f'rising_{file_name}'
+falling_file_name = f'falling_{file_name}'
 util.store_data(store_path, falling_file_name, falling_aged_df)
+
+
+# store full data frame
+util.store_data(store_path, file_name, df)

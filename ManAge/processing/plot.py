@@ -1,9 +1,126 @@
+from pathlib import Path
 import seaborn as sns
 import numpy as np
-import os
+import os, re
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib as mpl
+from matplotlib.ticker import ScalarFormatter
+import matplotlib.cm as cm  # Import colormap module
 from xil_res.node import Node as nd
+import utility.config as cfg
+
+plot_settings = {
+    # Font settings
+    'font.size': 12,
+    'font.family': 'Arial',
+    'text.color': 'black',
+    'axes.labelcolor': 'black',
+    'xtick.color': 'black',
+    'ytick.color': 'black',
+    'axes.titlesize': 16,
+    'axes.titleweight': 'bold',
+    'axes.labelsize': 14,
+    'axes.labelweight': 'bold',
+    'xtick.labelsize': 12,
+    'ytick.labelsize': 12,
+    'xtick.major.width': 1.0,
+    'ytick.major.width': 1.0,
+    'xtick.major.size': 6,
+    'ytick.major.size': 6,
+    'xtick.minor.width': 0.8,
+    'xtick.rotation': 0,
+    'ytick.rotation' : 0,
+    'xtick.alignment': 'right',
+    'xtick.labelrotation': 90,  # Rotation angle for x-axis tick labels
+    'ytick.labelrotation': 0,
+    'ytick.minor.width': 0.8,
+    'xtick.minor.size': 4,
+    'ytick.minor.size': 4,
+    'xtick.minor.visible': True,
+    'ytick.minor.visible': True,
+    'axes.edgecolor': 'black',
+    'axes.linewidth': 1.5,
+
+    # Textbox settings
+    'text.boxstyle': {'facecolor': 'white', 'edgecolor': 'lightgray', 'boxstyle': 'round,pad=0.5'},
+    'text.horizontalalignment': 'left',
+    'text.verticalalignment': 'top',
+    'text.fontsize': 12,
+    'text.fontweight': 'bold',
+    'text.x': 0.85,
+    'text.y': 0.95,
+
+    # Figure and plot settings
+    'figure.facecolor': 'white',
+    'axes.facecolor': 'white',
+    'figure.figsize': (10, 6),
+    'lines.linewidth': 2.0,
+    'lines.linestyle': '-',
+    'lines.marker': 'o',
+    'lines.markersize': 6,
+    'lines.markerfacecolor': 'blue',
+    'lines.markeredgewidth': 1.0,
+    'lines.markeredgecolor': 'black',
+
+    # Histogram settings
+    'hist.facecolor': '#2E4374',
+    'hist.edgecolor': 'white',
+    'hist.alpha': 0.7,
+
+    # Grid settings
+    'axes.grid': True,
+    'grid.color': 'gray',
+    'grid.linestyle': '--',
+    'grid.linewidth': 0.5,
+    'grid.alpha': 0.6,
+    'grid.which': 'both',  # Apply to both major and minor ticks
+    'grid.minor.color': 'lightgray',
+    'grid.minor.linestyle': ':',
+    'grid.minor.linewidth': 0.3,
+    'grid.minor.alpha': 0.6,
+
+    # Spine settings (plot outlines)
+    'spines.top': False,
+    'spines.right': False,
+    'spines.bottom': False,
+    'spines.left': False,
+    'spines.color': 'black',
+    'spines.linewidth': 1.5,
+
+    # Padding settings
+    'xtick.major.pad': 5,  # Padding between major ticks and their labels
+    'ytick.major.pad': 5,
+    'xtick.minor.pad': 3,  # Padding between minor ticks and their labels
+    'ytick.minor.pad': 3,
+    'axes.labelpad': 10,  # Padding between axis labels and the plot
+
+    # Bar plot settings
+    'bar.facecolor': '#FF6969',  # Default color for the bars
+    'bar.edgecolor': 'white',  # Edge color for the bars
+    'bar.linewidth': 1.5,  # Edge linewidth for the bars
+    'bar.alpha': 0.8,  # Transparency of the bars
+}
+
+def apply_plot_settings(settings):
+    # Apply general settings
+    mpl.rcParams.update({k: v for k, v in settings.items() if k in mpl.rcParams})
+
+    # Apply custom settings for text box
+    plt.textbox_settings = {
+        key.split('.')[-1]: value
+        for key, value in settings.items()
+        if key.startswith('text.')
+    }
+
+    # Apply spine settings
+    def apply_spine_settings(ax, settings):
+        for spine in ['top', 'right', 'bottom', 'left']:
+            ax.spines[spine].set_visible(settings[f'spines.{spine}'])
+            ax.spines[spine].set_color(settings['spines.color'])
+            ax.spines[spine].set_linewidth(settings['spines.linewidth'])
+
+    plt.apply_spine_settings = apply_spine_settings
 
 def print_heatmap_tiles_map(input_dict, store_path=None, filename=None, palette='colorblind', xlabel='FPGA Rows', ylabel='FPGA Columns'):
     # extract types and all_coords
@@ -53,17 +170,40 @@ def print_heatmap(input_dict, all_coords, rows, columns, store_file, palette, xl
     # Custom palette
     custom_palette = sns.color_palette(palette, len(types))
 
+    # font
+    font = {'family': 'Arial', 'color': 'black', 'weight': 'normal', 'size': 20}
+
     # Plot
     plt.figure(figsize=(8, 6))
-    ax = sns.heatmap(df, mask=mask, cmap=custom_palette)
-    ax.set(xlabel=xlabel, ylabel=ylabel)
+    #ax = sns.heatmap(df, mask=mask, cmap=custom_palette, vmin=-3e-13, vmax=2e-13, cbar=False)
+    ax = sns.heatmap(df, mask=mask, cmap=custom_palette, cbar=False)
+
+    # Add color bar manually
+    cbar = plt.colorbar(ax.collections[0], ax=ax.axes, orientation='vertical')
+    cbar.set_label('', fontsize=20)  # Set label with desired font size
+    cbar.ax.tick_params(labelsize=20)  # Set tick font size
+
+    # Remove the color bar border
+    cbar.outline.set_visible(False)
+
+    # Set ticks to scientific notation
+    cbar.ax.yaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+    cbar.ax.yaxis.get_offset_text().set_fontsize(20)  # Set the font size for the offset text (e.g., x10^3)
+    cbar.ax.tick_params(labelsize=20)  # Adjust font size for the ticks
+
+    ax.set_xlabel(xlabel, fontdict=font, labelpad=15)
+    ax.set_ylabel(ylabel, fontdict=font, labelpad=15)
+    #ax.set(xlabel=xlabel, ylabel=ylabel, fontdict=font)
+
+    plt.xticks(fontsize=15, fontfamily='Arial')
+    plt.yticks(fontsize=15, fontfamily='Arial')
 
     # Setting xticks and yticks based on maximum number allowed
     x_indices, x_labels = get_ticks_for_axis(len(columns))
     ax.set_xticks(x_indices)
     ax.set_xticklabels([list(columns)[i] for i in x_indices], rotation=0)  # Adjust rotation if necessary
 
-    y_indices, y_labels = get_ticks_for_axis(len(rows))
+    y_indices, y_labels = get_ticks_for_axis(len(rows), max_ticks=15)
     ax.set_yticks(y_indices)
     ax.set_yticklabels([list(rows)[::-1][i] for i in y_indices], rotation=0)
 
@@ -131,7 +271,7 @@ def get_data_matrix(input_dict, all_coords, apply_type=True):
 def plot_ageing_hist(ageing_list, store_file):
     # Plotting the histogram
     fig, ax = plt.subplots(figsize=(12, 8))  # Set the figure size (optional)
-    counts, bins, patches = plt.hist(ageing_list, bins=10, color='#e38e34', alpha=1, edgecolor='grey')  # Create histogram
+    counts, bins, patches = plt.hist(ageing_list, bins=10, color='#e38e34', alpha=1, edgecolor='white')  # Create histogram
 
     # Set font and font size for annotations
     font_annot = {'family': 'Arial', 'color': 'black', 'weight': 'normal', 'size': 15}
@@ -171,22 +311,29 @@ def plot_ageing_hist(ageing_list, store_file):
 
     return bins
 
-def plot_edge_type_bar(aged_edge_freq_dict, store_file):
+def plot_edge_type_bar(aged_edge_freq_dict, store_file, xlabel='Edge Type', ylabel='Normalized Occurrence', figsize=(50, 8)):
+    # Apply plot settings
+    apply_plot_settings(plot_settings)
+
     # sort dict
     aged_edge_freq_dict = dict(sorted(aged_edge_freq_dict.items(), key=lambda item: item[1], reverse=True))
 
-    fig, ax = plt.subplots(figsize=(12, 8))
+    fig, ax = plt.subplots(figsize=figsize)
 
     # Extract keys and values
     names = [str(key) for key in aged_edge_freq_dict.keys()]
     frequencies = list(aged_edge_freq_dict.values())
-    bars = plt.bar(names, frequencies, color='#006064', edgecolor='grey')
+    bars = ax.bar(names, frequencies, color=plot_settings['bar.facecolor'],
+                  edgecolor=plot_settings['bar.edgecolor'],
+                  linewidth=plot_settings['bar.linewidth'],
+                  alpha=plot_settings['bar.alpha'])
 
-    # Set font and font size for labels and title
+    axis_setting(ax, xlabel, ylabel)
+    '''# Set font and font size for labels and title
     font = {'family': 'Arial', 'color': 'black', 'weight': 'normal', 'size': 20}
 
     ax.set_xlabel('Edge', fontdict=font, labelpad=15)
-    ax.set_ylabel('Frequency', fontdict=font, labelpad=15)
+    ax.set_ylabel('Normalized Frequency', fontdict=font, labelpad=15)
 
     # Set font size for tick labels
     plt.xticks(fontsize=17, fontfamily='Arial', rotation=90)
@@ -210,6 +357,324 @@ def plot_edge_type_bar(aged_edge_freq_dict, store_file):
     # Annotate each bar with the frequency value
     for bar in bars:
         yval = bar.get_height()
-        plt.text(bar.get_x() + bar.get_width() / 2, yval + 0.5, f'{yval}', ha='center', va='bottom', fontdict=font_annot, rotation=90)
+        plt.text(bar.get_x() + bar.get_width() / 2, yval + 0.05, f'{yval}', ha='center', va='bottom', fontdict=font_annot, rotation=90)'''
 
     plt.savefig(store_file, bbox_inches='tight')
+    plt.clf()
+
+def plot_heatmap_coord_freq(df, type):
+    # heatmap of number of aged paths
+    df['x'] = df['origin'].apply(nd.get_x_coord)
+    df['y'] = df['origin'].apply(nd.get_y_coord)
+
+    # Filter rows with positive rising_delay_increase_%
+    incr_type = 'rising_delay_increase_%' if type == 'rising' else 'falling_delay_increase_%'
+    positive_rising_delay = df[df[incr_type] > 0]
+
+    # Count the positive occurrences of each combination of x and y
+    positive_counts = positive_rising_delay.groupby(['x', 'y']).size().reset_index(name='positive_count')
+
+    # Count the total occurrences of each combination of x and y
+    total_counts = df.groupby(['x', 'y']).size().reset_index(name='total_count')
+
+    # Merge positive and total counts
+    counts = pd.merge(positive_counts, total_counts, on=['x', 'y'], how='right').fillna(0)
+
+    # Normalize the counts
+    counts['normalized_positive_count'] = counts['positive_count'] / counts['total_count']
+
+    # Create a pivot table for the heatmap
+    heatmap_data = counts.pivot_table(index='y', columns='x', values='normalized_positive_count')
+
+    # Populate with normalized positive counts
+
+    # Plot the heatmap
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(heatmap_data, cmap='viridis')
+    plt.xlabel('FPGA Columns')
+    plt.ylabel('FPGA Rows')
+    plt.gca().invert_yaxis()
+    plt.show()
+
+def plot_bar_LUT_index(df, type, store_file):
+    # plots the rate of ageing at each index
+    incr_type = 'rising_delay_increase_%' if type == 'rising' else 'falling_delay_increase_%'
+    def extract_indexes(edge_set):
+        route_thrus = list(filter(lambda x: cfg.LUT_in_pattern.match(x[0]), edge_set))
+        return [tuple(map(lambda x: re.sub('[A-H]', '[A-H]', nd.get_port_suffix(x)), edge)) for edge in route_thrus]
+
+
+    # filter for rows where edges contain matching elements
+    filtered_df = df[df['edges'].apply(lambda edge_set: any(map(lambda x: cfg.LUT_in_pattern.match(x[0]), edge_set)))]
+
+    # Extract indexes from edges
+    filtered_df['indexes'] = filtered_df['edges'].apply(lambda edge_set: extract_indexes(edge_set))
+
+    # Flatten the list of indexes and create a count for each index
+    total_all_indexes = [index for sublist in filtered_df['indexes'] for index in sublist]
+    total_index_counts = pd.Series(total_all_indexes).value_counts().sort_index()
+
+    # Filter rows with positive rising_delay_increase_%
+    filtered_df = filtered_df[filtered_df[incr_type] > 0]
+    all_indexes = [index for sublist in filtered_df['indexes'] for index in sublist]
+    index_counts = pd.Series(all_indexes).value_counts().sort_index()
+
+    # Normalize the counts
+
+    normalized_counts = index_counts / total_index_counts
+    # Plot the bar plot
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+    categories = normalized_counts.index.map(lambda el: f"{el[0]} → {el[1]}")
+    values = normalized_counts.values
+    bars = ax.bar(categories, values,
+                  color=plot_settings['bar.facecolor'],
+                  edgecolor=plot_settings['bar.edgecolor'],
+                  linewidth=plot_settings['bar.linewidth'],
+                  alpha=plot_settings['bar.alpha'])
+
+    axis_setting(ax, 'Route Thru', 'Normalized Occureence')
+    plt.savefig(store_file, bbox_inches='tight')
+def plot_hist_aged_LUT_ins(df, type, store_file, annotate=True, figsize=(8, 6)):
+    # Apply plot settings
+    apply_plot_settings(plot_settings)
+
+    # plots the rate of ageing at each index
+    incr_type = 'rising_delay_increase_%' if type == 'rising' else 'falling_delay_increase_%'
+
+    filtered_df = df[df[incr_type] > 0]
+
+    def contains_matching_element(edge_set, pattern):
+        nodes = {node for edge in edge_set for node in edge}
+        return any(map(lambda node: pattern.match(node), nodes))
+
+    # Filter rows where edges contain matching elements
+    filtered_df = filtered_df[
+        filtered_df['edges'].apply(lambda edge_set: contains_matching_element(edge_set, cfg.LUT_in_pattern))]
+
+    # Extract rising_delay_increase_% values
+    trans_delay_increase_values = filtered_df[incr_type]
+
+    # Plot histogram
+    # Create some sample data
+    mean = np.mean(trans_delay_increase_values)
+    std = np.std(trans_delay_increase_values)
+
+    # Create a histogram
+    fig, ax = plt.subplots(figsize=figsize)
+    counts, bins, patches = ax.hist(trans_delay_increase_values, bins=10, alpha=plot_settings['hist.alpha'],
+                                    color=plot_settings['hist.facecolor'], edgecolor=plot_settings['hist.edgecolor'])
+
+    # Add a textbox with mean and std
+    ax.text(
+        0.85, 0.95, f'Mean: {mean:.2f}\nSTD: {std:.2f}',
+        transform=ax.transAxes,
+        fontsize=plot_settings['text.fontsize'],
+        weight=plot_settings['text.fontweight'],
+        bbox=plot_settings['text.boxstyle'],
+        horizontalalignment=plot_settings['text.horizontalalignment'],
+        verticalalignment=plot_settings['text.verticalalignment']
+    )
+
+    # Add labels and title
+    ax.set_xlabel('Degradation (%)', fontsize=plot_settings['axes.labelsize'], weight=plot_settings['axes.labelweight'],
+                  color=plot_settings['axes.labelcolor'], labelpad=plot_settings['axes.labelpad'])
+    ax.set_ylabel('Occurrence', fontsize=plot_settings['axes.labelsize'], weight=plot_settings['axes.labelweight'],
+                  color=plot_settings['axes.labelcolor'], labelpad=plot_settings['axes.labelpad'])
+
+    # Apply spine settings
+    plt.apply_spine_settings(ax, plot_settings)
+
+    # Adjust tick parameters for padding
+    ax.tick_params(axis='x', which='major', pad=plot_settings['xtick.major.pad'])
+    ax.tick_params(axis='y', which='major', pad=plot_settings['ytick.major.pad'])
+    ax.tick_params(axis='x', which='minor', pad=plot_settings['xtick.minor.pad'])
+    ax.tick_params(axis='y', which='minor', pad=plot_settings['ytick.minor.pad'])
+
+    if annotate:
+        # Add annotations on top of the bars
+        font_annot = {'family': 'Arial', 'color': 'black', 'weight': 'normal', 'size': 10}
+
+        for count, bin, patch in zip(counts, bins, patches):
+            height = patch.get_height()  # Get the height of each bar
+            plt.text(patch.get_x() + patch.get_width() / 2, height + 0.1, f'{int(count)}', ha='center', va='bottom',
+                     fontdict=font_annot)
+
+    # Set up the grid
+    ax.grid(True, which='both', color=plot_settings['grid.color'],
+            linestyle=plot_settings['grid.linestyle'],
+            linewidth=plot_settings['grid.linewidth'],
+            alpha=plot_settings['grid.alpha'])
+
+    # Enable minor ticks and add minor grid lines
+    ax.minorticks_on()
+    ax.grid(True, which='minor', color=plot_settings['grid.minor.color'],
+            linestyle=plot_settings['grid.minor.linestyle'],
+            linewidth=plot_settings['grid.minor.linewidth'],
+            alpha=plot_settings['grid.minor.alpha'])
+
+    # Turn off grid lines for the x-axis
+    ax.grid(False, which='both', axis='x')
+    '''fig, ax = plt.subplots(figsize=(12, 8))
+    counts, bins, patches = plt.hist(rising_delay_increase_values, bins=10, edgecolor='white')
+    # Set font and font size for annotations
+    font_annot = {'family': 'Arial', 'color': 'black', 'weight': 'normal', 'size': 15}
+
+    # Add annotations on top of the bars
+    for count, bin, patch in zip(counts, bins, patches):
+        height = patch.get_height()  # Get the height of each bar
+        plt.text(patch.get_x() + patch.get_width() / 2, height + 0.1, f'{int(count)}', ha='center', va='bottom',
+                 fontdict=font_annot)
+
+    # Set font and font size for labels and title
+    font = {'family': 'Arial', 'color': 'black', 'weight': 'normal', 'size': 20}
+
+    ax.set_xlabel('Degradation %', fontdict=font, labelpad=15)
+    ax.set_ylabel('Frequency', fontdict=font, labelpad=15)
+    # ax.set_title('Histogram with Customizations', fontdict=font)
+
+    # Set font size for tick labels
+    plt.xticks(fontsize=17, fontfamily='Arial')
+    plt.yticks(fontsize=17, fontfamily='Arial')
+
+    # Adjust space between ticks and tick labels
+    ax.tick_params(axis='x', pad=10)  # Adjust the pad for x-axis ticks
+    ax.tick_params(axis='y', pad=10)  # Adjust the pad for y-axis ticks
+
+    # Set grid line colors and shapes for major and minor ticks
+    ax.grid(which='major', axis='y', linestyle='--', linewidth=0.5, color='grey')
+    # ax.grid(which='minor', axis='y', linestyle=':', linewidth=0.5, color='green')
+
+    # Remove specific borders
+    for dir in ['right', 'left', 'top', 'bottom']:
+        ax.spines[dir].set_visible(False)'''
+
+    #plt.tight_layout()
+    #plt.show()
+    plt.savefig(store_file, bbox_inches='tight')
+
+def plot_hist_each_aged_LUT_index(df, type, store_file, figsize=(8, 6)):
+    stats = {type: {}}
+    incr_type = 'rising_delay_increase_%' if type == 'rising' else 'falling_delay_increase_%'
+
+    # Filter rows with positive rising_delay_increase_%
+    filtered_df = df[df[incr_type] > 0]
+
+    # Further filter for rows where edges contain matching elements
+    filtered_df = filtered_df[
+        filtered_df['edges'].apply(lambda edge_set: any(map(lambda x: cfg.LUT_in_pattern.match(x[0]), edge_set)))]
+
+    # Function to extract indexes from matching elements in the set
+    def extract_indexes(edge_set):
+        route_thrus = list(filter(lambda x: cfg.LUT_in_pattern.match(x[0]), edge_set))
+        return [tuple(map(lambda x: re.sub('[A-H]', '[A-H]', nd.get_port_suffix(x)), edge)) for edge in route_thrus]
+
+    # Extract indexes from edges
+    filtered_df['indexes'] = filtered_df['edges'].apply(lambda edge_set: extract_indexes(edge_set))
+
+    indexes = {index for sublist in filtered_df['indexes'] for index in sublist}
+    index_degrad_dict = {idx: [] for idx in indexes}
+
+    for idx, row in filtered_df.iterrows():
+        for index in row['indexes']:
+            index_degrad_dict[index].append(row[incr_type])
+
+    # Create six separate heatmaps, one for each index
+    for i, (idx, data) in enumerate(index_degrad_dict.items()):
+        mean = np.mean(data)
+        std = np.std(data)
+        stats[type].update({idx: (mean, std)})
+
+        # Create a histogram
+        fig, ax = plt.subplots(figsize=figsize)
+        counts, bins, patches = ax.hist(data, bins=10, alpha=plot_settings['hist.alpha'],
+                                        color=plot_settings['hist.facecolor'],
+                                        edgecolor=plot_settings['hist.edgecolor'])
+
+        axis_setting(ax, 'Degradation (%)', 'Occurrence', counts, bins, patches, mean, std)
+
+        store_file_idx = str(Path(store_file). parent / (Path(store_file).stem + f'_{idx[0].replace("[A-H]", "LUT_")}_{idx[1].replace("[A-H]", "")}.pdf'))
+        plt.savefig(store_file_idx, bbox_inches='tight')
+
+    return stats
+
+def axis_setting(ax, xlabel, ylabel, counts=None, bins=None, patches=None, mean=None, std=None, bars=None):
+    # Apply plot settings
+    apply_plot_settings(plot_settings)
+
+    # Add a textbox with mean and std
+    if all(map(lambda x: x is not None, (mean, std))):
+        ax.text(
+            plot_settings['text.x'], plot_settings['text.y'], f'Mean: {mean:.2f}\nSTD: {std:.2f}',
+            transform=ax.transAxes,
+            fontsize=plot_settings['text.fontsize'],
+            weight=plot_settings['text.fontweight'],
+            bbox=plot_settings['text.boxstyle'],
+            horizontalalignment=plot_settings['text.horizontalalignment'],
+            verticalalignment=plot_settings['text.verticalalignment']
+        )
+
+    # Add labels and title
+    ax.set_xlabel(xlabel, fontsize=plot_settings['axes.labelsize'],
+                  weight=plot_settings['axes.labelweight'],
+                  color=plot_settings['axes.labelcolor'], labelpad=plot_settings['axes.labelpad'])
+    ax.set_ylabel(ylabel, fontsize=plot_settings['axes.labelsize'], weight=plot_settings['axes.labelweight'],
+                  color=plot_settings['axes.labelcolor'], labelpad=plot_settings['axes.labelpad'])
+
+    # Apply spine settings
+    plt.apply_spine_settings(ax, plot_settings)
+
+    # Adjust tick parameters for padding
+    ax.tick_params(axis='x', which='major', pad=plot_settings['xtick.major.pad'])
+    ax.tick_params(axis='y', which='major', pad=plot_settings['ytick.major.pad'])
+    ax.tick_params(axis='x', which='minor', pad=plot_settings['xtick.minor.pad'])
+    ax.tick_params(axis='y', which='minor', pad=plot_settings['ytick.minor.pad'])
+
+    font_annot = {'family': 'Arial', 'color': 'black', 'weight': 'normal', 'size': 10}
+
+    if all(map(lambda x: x is not None, (counts, bins, patches))):
+
+        for count, bin, patch in zip(counts, bins, patches):
+            height = patch.get_height()  # Get the height of each bar
+            plt.text(patch.get_x() + patch.get_width() / 2, height + 0.1, f'{int(count)}', ha='center', va='bottom',
+                     fontdict=font_annot)
+
+    if bars:
+        for bar in bars:
+            yval = bar.get_height()
+            plt.text(bar.get_x() + bar.get_width() / 2, yval + 0.01, f'{yval}', ha='center', va='bottom',
+                     fontdict=font_annot, rotation=plot_settings['xtick.rotation'])
+
+    # Set up the grid
+    ax.grid(True, which='both', color=plot_settings['grid.color'],
+            linestyle=plot_settings['grid.linestyle'],
+            linewidth=plot_settings['grid.linewidth'],
+            alpha=plot_settings['grid.alpha'])
+
+    # Enable minor ticks and add minor grid lines
+    ax.minorticks_on()
+    ax.grid(True, which='minor', color=plot_settings['grid.minor.color'],
+            linestyle=plot_settings['grid.minor.linestyle'],
+            linewidth=plot_settings['grid.minor.linewidth'],
+            alpha=plot_settings['grid.minor.alpha'])
+
+    # Turn off grid lines for the x-axis
+    ax.grid(False, which='both', axis='x')
+
+    # rotation
+    plt.xticks(rotation=plot_settings['xtick.rotation'])
+    plt.yticks(rotation=plot_settings['ytick.rotation'])
+
+def plot_data(data, xlabel, ylabel, figsize=(8, 6)):
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.plot(data, color=plot_settings['bar.facecolor'],
+                  linestyle='',
+            marker='.',
+                  linewidth=plot_settings['bar.linewidth'],
+                  alpha=plot_settings['bar.alpha']
+            )
+
+    axis_setting(ax, xlabel, ylabel)
+
+    plt.tight_layout()
+    plt.show()
