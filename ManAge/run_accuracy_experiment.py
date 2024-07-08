@@ -94,7 +94,7 @@ bin_edges = np.arange(start=min(delays), stop=min(delays) + 11 * sps * 1e12, ste
 fig, ax = plt.subplots()
 
 # Plot histogram with the specified bins
-ax.hist(delays, bins=bin_edges, color='#e38e34', alpha=1, edgecolor='grey')
+ax.hist(delays, bins=bin_edges, color='#e38e34', alpha=1, edgecolor='white')
 
 # Set font and font size for labels and title
 font = {'family': 'Arial', 'color': 'black', 'weight': 'normal', 'size': 20}

@@ -96,7 +96,7 @@ class CM:
 
     @staticmethod
     def validate(param, value):
-        dct = {'Fin': {'max': 933e6, 'min': 10e6}, 'Fpsclk': {'max': 550e6, 'min': 10e6},
+        dct = {'Fin': {'max': 933e6, 'min': 10e6}, 'Fpsclk': {'max': 500e6, 'min': 10e6},
                'Fpdf': {'max': 550e6, 'min': 10e6}, 'Fvco': {'max': 1600e6, 'min': 800e6},
                'Fout': {'max': 775e6, 'min': 6.25e6}, 'M': {'max': 128, 'min': 2},
                 'D': {'max': 106, 'min': 1}, 'O': {'max': 128, 'min': 1}}

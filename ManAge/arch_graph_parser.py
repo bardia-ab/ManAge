@@ -10,21 +10,21 @@ import utility.config as cfg
 import utility.utility_functions as util
 
 material_palette = [
-    "#03A9F4",  # Light Blue
-    "#E91E63",  # Pink
-    "#FFC107",  # Amber
-    "#8BC34A",  # Light Green
-    "#9C27B0",  # Purple
+    "#adc5f1ff",  # Light Blue
+    "#f48b88ff",  # Pink
+    "#c4d6a0ff",  # Light Green
+    "#fcebddff",  # Amber
+    "#7e57c2ff",  # Purple
     "#673AB7",  # Deep Purple
     "#3F51B5",  # Indigo
-    "#F44336",  # Red
+    "#ef5350ff",  # Red
     "#2196F3",  # Blue
     "#00BCD4",  # Cyan
     "#009688",  # Teal
     "#4CAF50",  # Green
     "#CDDC39",  # Lime
     "#FFEB3B",  # Yellow
-    "#FF9800",  # Orange
+    "#ff6e40ff",  # Orange
     "#FF5722",  # Deep Orange
     "#795548",  # Brown
     "#9E9E9E",  # Grey
@@ -34,7 +34,7 @@ material_palette = [
 # initialize device
 # device_name = sys.argv[1]
 device_name = 'xczu9eg'
-desired_tile = 'INT_X46Y90'
+desired_tile = 'INT_X6Y90'
 
 device = Arch(device_name)
 
@@ -46,8 +46,8 @@ store_path = str(store_path)
 # draw tiles_map heatmap
 '''parsed_tiles_map = an.parse_tiles_map(device.tiles_map)
 filename = 'tiles_map.pdf'
-plot.print_heatmap_tiles_map(parsed_tiles_map, store_path=store_path, filename=filename, palette=material_palette)'''
-
+plot.print_heatmap_tiles_map(parsed_tiles_map, store_path=store_path, filename=filename, palette=material_palette)
+'''
 # draw wires_dict heatmap
 parsed_wires_dict = an.parse_wires_dict(device.wires_dict)
 filename = 'wires_dict.pdf'
@@ -55,8 +55,8 @@ plot.print_heatmap_wires_dict(parsed_wires_dict, store_path=store_path, filename
 
 '''slice_type = an.parse_slice_types(device.get_CLBs(), device.site_dict)
 filename = 'slice_type.pdf'
-plot.print_heatmap_tiles_map(slice_type, store_path=store_path, filename=filename, palette=material_palette)'''
-
+plot.print_heatmap_tiles_map(slice_type, store_path=store_path, filename=filename, palette=material_palette)
+'''
 # Intent Code Names
 # intent_code_path = r'C:\Users\t26607bb\Desktop\Practice\Arch_graph\Intent_Code_Names'
 '''nodes_dict = an.read_intent_code_files(intent_code_path)
@@ -71,6 +71,12 @@ in_pipjunc_dict = an.filter_pips_dict(pips_dict, 'downstream')
 out_pipjunc_dict = an.filter_pips_dict(pips_dict, 'upstream')
 both_pipjunc_dict = an.filter_pips_dict(pips_dict, 'both')
 
+# PIPs
+'''df = an.get_pip_df(device.pips)
+pips_latex_path = str(Path(store_path) / 'pips_latex.txt')
+an.get_pips_latex(df, pips_latex_path)'''
+
+
 '''csv_file = str(Path(store_path) / 'out_pipjunc_dict.csv')
 latex_file = str(Path(store_path) / 'out_pipjunc_dict.txt')
 an.pipjunc_csv(out_pipjunc_dict, csv_file)
@@ -79,7 +85,7 @@ an.pipjunc_latex(pips_dict, latex_file)'''
 # an.get_regex('CLEM_X6Y112/CLE_CLE_M_SITE_0_E3')
 # an.get_regex('CLEM_X6Y112/CLE_CLE_M_SITE_0_A3')
 
-wires_dict_regex = an.get_node_head(device.wires_dict[desired_tile], desired_tile)
+'''wires_dict_regex = an.get_node_head(device.wires_dict[desired_tile], desired_tile)
 
 bln = [wire for wire in device.wires_dict[desired_tile] if nd.get_tile(wire[0]) == desired_tile and 'BLN' in wire[1]]
 bls = [wire for wire in device.wires_dict[desired_tile] if nd.get_tile(wire[0]) == desired_tile and 'BLS' in wire[1]]
@@ -145,4 +151,4 @@ for edge in copy.deepcopy(west_G.edges):
 removed_nodes = [node for node in west_G if west_G.in_degree(node) == west_G.out_degree(node) == 0]
 west_G.remove_nodes_from(removed_nodes)
 
-print('hi')
+print('hi')'''

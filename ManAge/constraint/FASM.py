@@ -83,7 +83,7 @@ def convert_FASM_pip(pip_entry):
     if '=' in pip_entry:
         pip_entry = pip_entry.strip().split('=')[0]
 
-    fields = pip_entry.split('.')
+    fields = pip_entry.strip().split('.')
     fields.pop(1)
     INT_tile, port_v, port_u = fields[0:3]
     pip_u = f'{INT_tile}/{port_u}'

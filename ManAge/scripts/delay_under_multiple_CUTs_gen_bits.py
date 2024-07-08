@@ -17,7 +17,7 @@ input_bitstream = r"C:\Users\t26607bb\Desktop\CPS_Project\Path_Search\Data_xczu7
 fasm2bit_path = r"C:\Users\t26607bb\Desktop\Pyteman\pyteman_dist\fasm2bit.py"
 TC_file = r"C:\Users\t26607bb\Desktop\CPS_Project\Path_Search\Data_xczu7eg\Configurations\X2Y1\TC0.data"
 
-script = Path(__file__).absolute().parent.parent / 'delay_multiple_cut_fasm_bit.py'
+script = Path(__file__).absolute().parent.parent / 'tmp_delay_multiple_cut_fasm_bit.py'
 
 n_removed_CUTs = list(range(100, 10550, 100))
 

@@ -50,14 +50,15 @@ def fill_rect_TC(device, TC, rectangle, D_CUTs, split_TC_path):
     util.store_data(str(split_TC_path), f'{bitstream_name}.data', rect_TC)
     print(f'{bitstream_name} is done!')
 
-def relocate(fasm_list, new_clb):
+def relocate(fasm_list, new_tile):
     new_fasm_list = set()
     for entry in fasm_list:
         if entry.startswith('CLE'):
-            new_fasm_list.add(re.sub('CLE[LM](_[LR])*_X\d+Y\d+', new_clb, entry))
+            new_fasm_list.add(re.sub('CLE[LM](_[LR])*_X\d+Y\d+', new_tile, entry))
 
         if entry.startswith('INT'):
-            new_fasm_list.add(re.sub('INT(_INTF_[LR](_PCIE4|_TERM_GT)*)*_X\d+Y\d+|INT_INTF_(LEFT|RIGHT)_TERM_(IO|PSS)', f'INT_{nd.get_coordinate(new_clb)}', entry))
+            INT_tile = f'INT_{nd.get_coordinate(new_tile)}' if nd.get_tile_type(new_tile) == 'CLB' else new_tile
+            new_fasm_list.add(re.sub('INT(_INTF_[LR](_PCIE4|_TERM_GT)*)*_X\d+Y\d+|INT_INTF_(LEFT|RIGHT)_TERM_(IO|PSS)', INT_tile, entry))
 
     return new_fasm_list
 
@@ -70,8 +71,18 @@ rect_width = int(sys.argv[3])
 rect_height = int(sys.argv[4])
 store_path = sys.argv[5]
 
+
+#device_name = 'xczu9eg'
+#CWD = Path(__file__).parent
+#script_cluster = str(CWD / 'RO_cluster.py')
+#fasm_path = str(Path(cfg.Data_path) / 'FASM')
+#rect_width = 5
+#rect_height = 25
+#store_path = rf'C:\Users\t26607bb\Desktop\CPS_Project\Path_Search\Data_xczu9eg_RO\FASM\bardia_{rect_width}x{rect_height}'
+
+
 # create folder
-Path(store_path).mkdir(exist_ok=True)
+Path(store_path).mkdir(parents=True, exist_ok=True)
 
 # Device
 device = Arch(device_name, non_clb_tiles=True)
@@ -88,11 +99,15 @@ reversed_site_dict = {value: key for key, value in device.site_dict.items()}
 sites = {device.site_dict[clb] for clb in device.get_CLBs()}
 rectangles = split_grid(sites, rect_width, rect_height)
 
+# filter
+rectangles = [next(filter(lambda x: device.site_dict['CLEM_X14Y373'] in x, rectangles))]
+
 for rectangle in rectangles:
     fasm_list = set()
     clbs = {reversed_site_dict[site] for site in rectangle}
     min_x, max_x, min_y, max_y = get_boundaries(clbs)
-    output_file = str(Path(store_path) / f'X{(min_x + max_x) // 2}Y{(min_y + max_y) // 2}.fasm')
+    #output_file = str(Path(store_path) / f'X{(min_x + max_x) // 2}Y{(min_y + max_y) // 2}.fasm')
+    output_file = str(Path(store_path) / f',c{rect_width}r{rect_height}.fasm')
     #if f'{bitstream_name}.data' in os.listdir(str(store_path)):
         #continue
 
@@ -110,16 +125,19 @@ for rectangle in rectangles:
 
         else:
             fasm_list.update(relocate(fasm_dict[tile_map_type], clb))
+            continue
+
             try:
-                #INTF_tile = next(filter(lambda tile: re.match(f'INT_INTF_[LR]_(PCIE4)*_{nd.get_coordinate(clb)}', tile), device.tiles))
-                INTF_tile = next(filter(lambda tile: tile.startswith('INT_INTF') and nd.get_coordinate(clb) in tile, device.tiles))
+                INTF_tile = next(filter(lambda tile: tile.startswith('INT_INTF') and nd.get_coordinate(clb) in tile and tile.split('_X')[0] in fasm_dict, device.tiles))
             except StopIteration:
                 continue
 
             INTF_tile_type = INTF_tile.split("_X")[0]
-            fasm_list.update(relocate(fasm_dict[INTF_tile_type], clb))
+            try:
+                fasm_list.update(relocate(fasm_dict[INTF_tile_type], INTF_tile))
+            except:
+                print(list(filter(lambda tile: tile.startswith('INT_INTF') and nd.get_coordinate(clb) in tile, device.tiles)))
 
     with open(output_file, 'w+') as fasm_file:
-        fasm_file.writelines(fasm_list)
-
-    print(f'{Path(output_file).name} is done!')
+        fasm_file.write('\n'.join(sorted(fasm_list)))
+        fasm_file.write('\n')
