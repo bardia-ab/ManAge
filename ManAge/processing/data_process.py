@@ -198,9 +198,7 @@ def validate_result(segments, vivado_srcs_path, TC_name, N_Parallel):
     return result
 
 def log_results(result, bit_file_name, store_path, type):
-    if result:
-        print(f'{bit_file_name} => Rising Passed!\n')
-    else:
+    if not result:
         validation_file = Path(store_path) / 'validation.txt'
         with open(validation_file, 'a+') as file:
             file.write(f'{bit_file_name} => {type} Failed!\n')
