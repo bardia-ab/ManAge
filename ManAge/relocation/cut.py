@@ -2,21 +2,21 @@ import re
 import networkx as nx
 from xil_res.cut import CUT
 from xil_res.node import Node as nd
+from xil_res.edge import Edge
 from xil_res.primitive import FF, SubLUT
 from xil_res.path import Path
+from relocation.rloc import RLOC as rl
 import utility.config as cfg
 
 class D_CUT(CUT):
     __slots__ = ('origin', 'index', 'main_path', 'paths', 'FFs', 'subLUTs', 'G', 'nodes_dict')
-    def __init__(self, origin: str, tiles_map, cut: CUT, iteration=None, index=None):
+    def __init__(self, origin: str, tiles_map, wires_dict, cut: CUT, iteration=None, index=None):
         index = (iteration - 1) * cfg.max_capacity + cut.index if (iteration is not None) else index
         super().__init__(origin, index)
         del self.paths
-        self.nodes_dict = self.get_nodes_dict(tiles_map, cut)
-        self.FFs        = self.get_relocated_FFs(tiles_map, cut)
-        self.subLUTs    = self.get_relocated_subLUTs(tiles_map, cut)
-        self.set_graph(cut)
-        self.set_main_path()
+        valid = self.init_D_CUT(cut, tiles_map, wires_dict)
+        if not valid:
+            raise ValueError
 
     def __repr__(self):
         return f'D_CUT(index={self.index}, origin={self.origin})'
@@ -30,9 +30,6 @@ class D_CUT(CUT):
     def get_nodes_dict(self, tiles_map, cut):
         tiles_map = tiles_map
         nodes_dict = {node: nd.dislocate_node(tiles_map, node, self.origin, origin=cut.origin) for node in cut.G}
-        if None in nodes_dict.values():
-            print(nodes_dict)
-            raise ValueError(f'{next(k for k,v in nodes_dict.items() if v is None)}: invalid node in D_CUT!')
 
         return nodes_dict
 
@@ -61,6 +58,39 @@ class D_CUT(CUT):
             subLUTs.add(D_subLUT)
 
         return subLUTs
+
+    def validate_tiles(self):
+        return None not in self.nodes_dict.values()
+
+    def validate_wires(self, wires_dict):
+        wires = filter(lambda edge: Edge(edge).get_type() == 'wire', self.G.edges)
+        return all(map(lambda wire: wire in wires_dict[nd.get_tile(wire[0])], wires))
+
+    def init_D_CUT(self, cut, tiles_map, wires_dict):
+        # Populate nodes_dict
+        self.nodes_dict = self.get_nodes_dict(tiles_map, cut)
+
+        # Validate the tiles
+        valid = self.validate_tiles()
+        if not valid:
+            return valid
+
+        # Set up the graph based on 'cut'
+        self.set_graph(cut)
+
+        # Validate the wires
+        valid = self.validate_wires(wires_dict)
+        if not valid:
+            return valid
+
+        # Relocate FFs and subLUTs
+        self.FFs = self.get_relocated_FFs(tiles_map, cut)
+        self.subLUTs = self.get_relocated_subLUTs(tiles_map, cut)
+
+        # Set the main path
+        self.set_main_path()
+
+        return True
 
     def set_graph(self, cut):
         edges = map(lambda e: (self.nodes_dict[e[0]], self.nodes_dict[e[1]]), cut.G.edges)
@@ -110,3 +140,54 @@ class D_CUT(CUT):
             g_buffer = "00"
 
         return g_buffer
+
+    def get_RLOC_G(self, cut):
+        RLOC_G = nx.DiGraph()
+        for edge in cut.G.edges:
+            RLOC_edge = []
+            for node in edge:
+                RLOC_node = nd.get_RLOC_node(node, cut.origin)
+                if RLOC_node not in self.nodes_dict:
+                    self.nodes_dict[node] = RLOC_node
+
+                RLOC_edge.append(RLOC_node)
+            #RLOC_edge = tuple(map(lambda node: nd.get_RLOC_node(node, self.origin), edge))
+            RLOC_G.add_edge(*RLOC_edge)
+
+        return RLOC_G
+
+    def get_DLOC_G(self, tiles_map, RLOC_G):
+        reversed_nodes_dict = {value: key for key, value in self.nodes_dict.items()}
+        DLOC_G = nx.DiGraph()
+        for edge in RLOC_G.edges:
+            DLOC_edge = []
+            for RLOC_node in edge:
+                DLOC_node = self.get_DLOC_node(tiles_map, RLOC_node)
+                node = reversed_nodes_dict[RLOC_node]
+                self.nodes_dict[node] = DLOC_node
+
+                DLOC_edge.append(DLOC_node)
+            #DLOC_edge = tuple(map(lambda node: self.get_DLOC_node(tiles_map, node), edge))
+            DLOC_G.add_edge(*DLOC_edge)
+
+        return DLOC_G
+
+    def get_DLOC_node(self, tiles_map, RLOC_node):
+        if nd.get_tile_type(RLOC_node) == 'INT':
+            tile = f'INT_{self.origin}'
+            port = nd.get_port(RLOC_node)
+        else:
+            direction = RLOC_node.split('_')[1]
+            tile = tiles_map[self.origin][f'CLB_{direction}']
+            port = f'CLE_CLE_{nd.get_site_type(tile)}_SITE_0_{nd.get_port(RLOC_node)}'
+
+        return f'{tile}/{port}'
+    def verify_RLOC_tiles(self, tiles_map, RLOC_G):
+        RLOC_tiles = {nd.get_tile(node) for node in RLOC_G}
+        DLOC_tiles = {rl.get_DLOC_tile(tiles_map, RLOC_tile, self.origin) for RLOC_tile in RLOC_tiles}
+
+        return all(map(lambda tile: tile is not None, DLOC_tiles))
+
+    def verify_wire(self, wires_dict, DLOC_G):
+        wires = filter(lambda edge: Edge(edge).get_type() == 'wire', DLOC_G.edges)
+        return all(map(lambda edge: edge in wires_dict[nd.get_tile(edge[0])],wires))
