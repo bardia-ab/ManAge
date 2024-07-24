@@ -88,6 +88,14 @@ class CUT:
         self.main_path = Path()
         self.main_path. nodes = nx.shortest_path(self.G, src, sink)
 
+    def get_DLOC_G(self, tiles_map, target_origin):
+        DLOC_G = nx.DiGraph()
+        for edge in self.G.edges:
+            DLOC_edge = tuple(map(lambda node: nd.dislocate_node(tiles_map, node, target_origin, origin=self.origin), edge))
+            DLOC_G.add_edge(*DLOC_edge)
+
+        return DLOC_G
+
     @staticmethod
     def conv_paths2CUT(TC, index, origin, *paths):
         cut = CUT(cut_index=index, origin=origin)
