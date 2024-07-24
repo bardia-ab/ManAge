@@ -8,7 +8,8 @@ with open('config.yaml', 'r') as file:
 
 arch_graph_path     = config[platform.system()]['arch_graph_path']
 Data_path           = config[platform.system()]['Data_path']
-vivado_project_path  = config[platform.system()]['vivado_project_path']
+vivado_project_path = config[platform.system()]['vivado_project_path']
+pyteman_path        = config[platform.system()]['pyteman_path']
 
 ############## Directories
 minimal_config_path = os.path.join(Data_path, 'Minimal_Configurations')
@@ -70,6 +71,10 @@ max_path_length = config['Path']['max_path_length']
 ###### TC
 max_capacity = config['TC']['max_capacity']
 long_TC_process_time = config['TC']['long_TC_process_time']
+long_TC_process_time_local = config['TC']['long_TC_process_time_local']
+
+##### Iteration
+first_iteration = True
 
 ##### constraints
 name_prefix = config['Constraints']['name_prefix']
@@ -86,3 +91,16 @@ python = 'python' if platform.system() == 'Windows' else 'python3'
 
 ##### parallel
 n_jobs = config['Parallel']['n_jobs']
+
+##### CM
+fin = config['CM']['fin']
+D1 = config['CM']['D1']
+M1 = config['CM']['M1']
+O1 = config['CM']['O1']
+fpsclk1 = config['CM']['fpsclk1']
+mode_CM1 = config['CM']['mode_CM1']
+D2 = config['CM']['D2']
+M2 = config['CM']['M2']
+O2 = config['CM']['O2']
+fpsclk2 = config['CM']['fpsclk2']
+mode_CM2 = config['CM']['mode_CM2']
