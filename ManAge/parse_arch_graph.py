@@ -32,8 +32,7 @@ parser_slice_map = subparser.add_parser('slice_map', parents=[parent_parser], he
 if __name__ == '__main__':
 
     # Parse the arguments
-    args = parser.parse_args(['slice_map', 'xczu3eg', r'C:\Users\t26607bb\Desktop\Practice\Thesis_Experiments\slice_map.pdf',
-                              '-s', '20', '6'])
+    args = parser.parse_args()
 
     # Create device
     device = Arch(args.device_name)

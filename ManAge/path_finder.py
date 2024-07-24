@@ -54,7 +54,7 @@ if __name__ == "__main__":
             test_collection.store_TC()
         elif test_collection.prev_config_files:
             pass
-        elif Empty_TC:
+        elif not Empty_TC:
             device.reset_costs(test_collection)
             device.reform_cost()
             Empty_TC = True
