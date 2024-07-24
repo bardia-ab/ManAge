@@ -57,7 +57,7 @@ class FF(Primitive):
         return f'FF(name={self.name}, usage={self.usage}, node={self.node})'
 
     def __eq__(self, other):
-        return type(self) == type(other) and self.name == other.name and self.node == other.node
+        return type(self) == type(other) and self.name == other.name
 
     def __hash__(self):
         return hash((self.name, self.node))
@@ -90,6 +90,12 @@ class FF(Primitive):
         node = nd.dislocate_node(tiles_map, other_FF.node, D_origin)
         self.set_usage(node)
 
+    def get_nodes(self):
+        FF_in = nd.get_FF_input(self.tile, self.label, self.get_index())
+        FF_out = nd.get_FF_output(self.tile, self.label, self.get_index())
+
+        return {FF_in, FF_out}
+
 class SubLUT(Primitive):
     __slots__ = ('name', 'usage', '_inputs', '_output', 'func')
     def __init__(self, name):
@@ -105,7 +111,7 @@ class SubLUT(Primitive):
         if self.bel is None:
             return f'SubLUT(name={self.name})'
         else:
-            return f'SubLUT(BEL={self.bel}, input={self.inputs}, output={self.output})'
+            return f'SubLUT(BEL={self.port}, input={self.inputs}, output={self.output})'
 
     def __eq__(self, other):
         return type(self) == type(other) and self.name == other.name and self.usage == other.usage and self.inputs == other.inputs and self.output == other.output and self.func == other.func
@@ -212,6 +218,10 @@ class LUT(Primitive):
         return (self.usage == 'used') and (self.capacity == 0) and (self.prev_capacity > self.capacity)
 
     @property
+    def has_new_subLUT(self):
+        return (self.usage == 'used') and (self.prev_capacity > self.capacity)
+
+    @property
     def has_freed(self):
         return (self.usage != 'blocked') and (self.prev_capacity < self.capacity)
 
@@ -219,6 +229,11 @@ class LUT(Primitive):
     def has_emptied(self):
         return (self.usage == 'free') and (self.capacity == cfg.LUT_Capacity) and (self.prev_capacity < self.capacity)
 
+    def block_usage(self):
+        if self.has_new_subLUT:
+            self.prev_capacity = self.capacity
+            if self.capacity == 0:
+                self.usage = 'blocked'
     def add_subLUT(self, subLUT: SubLUT):
         LUT_name = re.sub('[56]LUT', 'LUT', subLUT.name)
         if self.name != LUT_name:
@@ -267,6 +282,30 @@ class LUT(Primitive):
         init = format(int(init, base=2), '016X')
 
         return init
+
+    def get_nodes(self):
+        LUT_ins = {nd.get_LUT_input(self.tile, self.label, index) for index in range(7)}
+        LUT_mux = nd.get_MUXED_CLB_out(self.tile, self.label)
+        LUT_CLB_out = nd.get_CLB_out(self.tile, self.label)
+
+        LUT_nodes = LUT_ins | {LUT_mux, LUT_CLB_out}
+
+        return LUT_nodes
+
+    def get_partial_block_nodes(self):
+        LUT_in_6 = nd.get_LUT_input(self.tile, self.label, 6)
+        LUT_mux = nd.get_MUXED_CLB_out(self.tile, self.label)
+
+        return {LUT_in_6, LUT_mux}
+
+    def get_subLUT_name(self):
+        if self.capacity == cfg.LUT_Capacity:
+            return f'{self.tile}/{self.label}6LUT'
+        elif self.capacity == 1:
+            bel = '5LUT' if self.subLUTs[0].bel[1:] == '6LUT' else '6LUT'
+            return f'{self.tile}/{self.label}{bel}'
+        else:
+            return None
 
     @staticmethod
     def get_truth_table(n_entry):
