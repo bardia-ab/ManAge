@@ -155,11 +155,19 @@ class Config:
 
     def fill_D_CUTs(self, rloc_collection, minimal_TC):
         tiles_map = rloc_collection.device.tiles_map
+        wires_dict = rloc_collection.device.wires_dict
+        device = rloc_collection.device
+        iteration = len(rloc_collection.origins)
         CUTs = minimal_TC.CUTs
 
         # first add CUTs
         for cut in CUTs:
-            d_cut = D_CUT(cut.origin, tiles_map, cut, iteration=rloc_collection.iteration)
+            #minimal_wires_dict = self.get_minimal_wires_dict(minimal_TC, tiles_map, wires_dict, rloc_collection.origin, cut.origin)
+            try:
+                d_cut = D_CUT(cut.origin, tiles_map, wires_dict, cut, iteration)
+            except ValueError:
+                breakpoint()
+
             self.add_D_CUT(rloc_collection, d_cut)
 
         # set CD
@@ -167,11 +175,22 @@ class Config:
 
         for cut_idx, cut in enumerate(CUTs):
             # get D_CUTs with valid tiles and wires
-            D_CUTs = self.get_valid_D_CUTs(rloc_collection, cut)
+            #D_CUTs = self.get_valid_D_CUTs(rloc_collection, cut)
+            origins = (coord for CR in device.CRs for coord in CR.coords)
+            #D_CUTs = self.create_instances_parallel(origins, tiles_map, wires_dict, cut, iteration)
+            D_CUTs = self.d_cut_generator(origins, tiles_map, wires_dict, cut, iteration)
 
-            for d_cut in D_CUTs:
+            for idx, d_cut in enumerate(D_CUTs):
                 if self.check_collision(d_cut) and self.check_LUT_util(d_cut) and self.check_FF_util(d_cut):
                     self.add_D_CUT(rloc_collection, d_cut)
+
+    def d_cut_generator(self, origins, tiles_map, wires_dict, cut, iteration=None):
+        for origin in origins:
+            #minimal_wires_dict = self.get_minimal_wires_dict(minimal_TC, tiles_map, wires_dict, cut.origin, origin)
+            try:
+                yield D_CUT(origin, tiles_map, wires_dict, cut, iteration=iteration)
+            except ValueError:
+                continue
 
     def get_valid_D_CUTs(self, rloc_collection, cut: CUT):
         tiles_map = rloc_collection.device.tiles_map
