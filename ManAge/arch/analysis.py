@@ -55,7 +55,6 @@ def merge_values_based_on_subset_keys(data):
     keys_to_remove = set()
 
     for i, key_i in enumerate(keys):
-        print(f'*{i}')
         for key_j in keys[i + 1:]:
             # Check if key_i is a subset of key_j
             if key_i.issubset(key_j):
@@ -346,38 +345,3 @@ def get_pips_latex(df, latex_file):
     # Writing to a LaTeX file
     with open(latex_file, 'w') as f:
         f.write(latex_table)
-
-if __name__ == '__main__':
-    from xil_res.architecture import Arch
-    import matplotlib.pyplot as plt
-    import numpy as np
-    import networkx as nx
-
-    device = Arch('xczu3eg')
-
-
-    G = nx.DiGraph()
-    node_dict = {}
-
-    '''for pip in device.pips:
-        for node in pip:
-            if get_regex(node) not in node_dict:
-                node_dict[get_regex(node)] = f'Node{len(node_dict) + 1}'
-
-        G.add_edge(node_dict[get_regex(pip[0])], node_dict[get_regex(pip[1])])'''
-
-    G.add_edges_from(device.pips)
-
-    #draw_node_sub_graph(G, 'SS1_[EW]_BEG\\d+')
-
-    # Generate the adjacency matrix
-    adj_matrix = nx.adjacency_matrix(G)
-
-    # Convert the sparse matrix to a NumPy array for easier manipulation (if needed)
-    adj_matrix_array = adj_matrix.toarray()
-
-    rank = np.linalg.matrix_rank(adj_matrix_array)
-
-    print("Rank of the adjacency matrix:", rank)
-
-    print('hi')
