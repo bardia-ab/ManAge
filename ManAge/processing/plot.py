@@ -122,7 +122,7 @@ def apply_plot_settings(settings):
 
     plt.apply_spine_settings = apply_spine_settings
 
-def print_heatmap_tiles_map(input_dict, store_path=None, filename=None, palette='colorblind', xlabel='FPGA Rows', ylabel='FPGA Columns'):
+def print_heatmap_tiles_map(input_dict, store_path=None, filename=None, palette='colorblind', xlabel='FPGA Rows', ylabel='FPGA Columns', figsize=(8, 6)):
     # extract types and all_coords
     all_coords = get_all_coords(input_dict)
 
@@ -135,9 +135,9 @@ def print_heatmap_tiles_map(input_dict, store_path=None, filename=None, palette=
 
     # print heatmap
     store_file = os.path.join(store_path, filename)
-    print_heatmap(reversed_input_dict, all_coords, rows, columns, store_file, palette, xlabel, ylabel)
+    print_heatmap(reversed_input_dict, all_coords, rows, columns, store_file, palette, xlabel, ylabel, figsize)
 
-def print_heatmap_wires_dict(input_dict, store_path=None, filename=None, palette='pastel', xlabel='FPGA Rows', ylabel='FPGA Columns'):
+def print_heatmap_wires_dict(input_dict, store_path=None, filename=None, palette='pastel', xlabel='FPGA Rows', ylabel='FPGA Columns', figsize=(8,6)):
     # extract types and all_coords
     all_coords = {nd.get_coordinate(tile) for type, tiles in input_dict.items() for tile in tiles}
 
@@ -150,9 +150,9 @@ def print_heatmap_wires_dict(input_dict, store_path=None, filename=None, palette
 
     # print heatmap
     store_file = os.path.join(store_path, filename)
-    print_heatmap(reversed_input_dict, all_coords, rows, columns, store_file, palette, xlabel, ylabel, remove_cbar=True)
+    print_heatmap(reversed_input_dict, all_coords, rows, columns, store_file, palette, xlabel, ylabel, figsize, remove_cbar=True)
 
-def print_heatmap(input_dict, all_coords, rows, columns, store_file, palette, xlabel, ylabel, apply_type=True, remove_cbar=False):
+def print_heatmap(input_dict, all_coords, rows, columns, store_file, palette, xlabel, ylabel, figsize, apply_type=True, remove_cbar=False):
     types = list(set(input_dict.values()))
 
     # Create the data matrix (assuming get_data_matrix is defined correctly)
@@ -174,7 +174,7 @@ def print_heatmap(input_dict, all_coords, rows, columns, store_file, palette, xl
     font = {'family': 'Arial', 'color': 'black', 'weight': 'normal', 'size': 20}
 
     # Plot
-    plt.figure(figsize=(8, 6))
+    plt.figure(figsize=figsize)
     #ax = sns.heatmap(df, mask=mask, cmap=custom_palette, vmin=-3e-13, vmax=2e-13, cbar=False)
     ax = sns.heatmap(df, mask=mask, cmap=custom_palette, cbar=False)
 
