@@ -2,11 +2,13 @@ Windows:
   arch_graph_path     : C:\Users\t26607bb\Desktop\graph_zcu9eg
   Data_path           : C:\Users\t26607bb\Desktop\CPS_Project\Path_Search\Data_xczu9eg
   vivado_project_path : C:\Users\t26607bb\Desktop\Practice\CPS_ZCU104\vivado_proj
+  pyteman_path        : C:\Users\t26607bb\Desktop\Pyteman\pyteman_dist
 
 Linux:
   arch_graph_path     : /home/bardia/Desktop/bardia/Architecture Graph/ZCU9EG
   Data_path           : /home/bardia/Desktop/bardia/ManAge_Data/Data_xczu9eg_RO
   vivado_project_path :
+  pyteman_path        : /home/bardia/Downloads/pyteman/pyteman_dist
 
 General:
   print_message : False
@@ -51,6 +53,7 @@ Path:
 TC:
   max_capacity  : 16
   long_TC_process_time  : 60
+  long_TC_process_time_local  : 7
 
 Constraints:
   name_prefix : design_1_i/top_0/U0/Inst/CUTs_Inst/CUT_{}/{}
@@ -63,4 +66,17 @@ Constraints:
   N_Parallel        : 50
 
 Parallel:
-  n_jobs            : 4
+  n_jobs            : 3
+
+CM:
+  fin       : 100e6
+  D1        : 1
+  M1        : 15
+  O1        : 15
+  fpsclk1   : 100e6
+  mode_CM1  : 'incremental'
+  D2        : 1
+  M2        : 16
+  O2        : 16
+  fpsclk2   : 100e6
+  mode_CM2  : 'decremental'
