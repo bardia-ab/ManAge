@@ -62,7 +62,7 @@ class PIP(Edge):
             return reversed_pip
         else: return None
 
-    def get_invalid_FF_route_thru_nodes(self, TC):
+    def get_invalid_FF_route_thru_nodes2(self, TC):
         block_nodes = set()
         LUT_primitive, LUT_capacity, occupancy = None, None, None
         if nd.get_clb_node_type(self.neigh_v) == 'LUT_in':
@@ -114,6 +114,52 @@ class PIP(Edge):
                               }
 
                 block_nodes.update(TC.filter_nodes(**attributes))
+
+        return block_nodes
+
+    def get_invalid_FF_route_thru_nodes(self, TC):
+        block_nodes = set()
+        try:
+            CLB_node = next(filter(lambda node: nd.get_tile_type(node) == 'CLB', {self.pred_u, self.neigh_v}))
+            LUT_name = f'{nd.get_tile(CLB_node)}/{nd.get_label(CLB_node)}LUT'
+            LUT_primitive = TC.LUTs[LUT_name]
+            occupancy = 2 if (cfg.LUT_in6_pattern.match(CLB_node) or cfg.MUXED_CLB_out_pattern.match((CLB_node))) else 1
+
+            # Since CLB_out node is instantiated as a cell and only once is allowed, all others must be blocked
+            if nd.get_clb_node_type(CLB_node) == 'CLB_out':
+                block_nodes.update(TC.filter_nodes(get_clb_node_type='CLB_out'))
+                block_nodes = block_nodes - {CLB_node}
+
+            # Block all route-thrus
+            if occupancy > LUT_primitive.capacity:
+                block_nodes.update(filter(cfg.LUT_in_pattern.match, TC.G))
+
+            # block LUT_in6 & CLB_muxed in the same clock group with the same label
+            elif LUT_primitive.capacity == 1:
+                attributes = {'get_clb_node_type': 'CLB_muxed',
+                              'get_clock_group': nd.get_clock_group(self.neigh_v),
+                              'get_label': nd.get_label(self.neigh_v)
+                              }
+                block_nodes.update(TC.filter_nodes(**attributes))
+
+                attributes = {'get_clb_node_type': 'LUT_in',
+                              'get_bel_index': 6,
+                              'get_clock_group': nd.get_clock_group(self.pred_u),
+                              'get_label': nd.get_label(self.pred_u)
+                              }
+                block_nodes.update(TC.filter_nodes(**attributes))
+
+            # Block sources in the same clock group of the LUT primitive with the same label
+            if LUT_primitive.capacity == occupancy:
+                attributes = {'get_clb_node_type': 'FF_out',
+                              'get_clock_group': LUT_primitive.clock_group,
+                              'get_label': LUT_primitive.label
+                              }
+
+                block_nodes.update(TC.filter_nodes(**attributes))
+
+        except StopIteration:
+            block_nodes.update(filter(cfg.LUT_in_pattern.match, TC.G))
 
         return block_nodes
 
