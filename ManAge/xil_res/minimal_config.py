@@ -16,23 +16,37 @@ from joblib import Parallel, delayed
 
 class MinConfig:
 
-    __slots__ = ('G', 'TC_idx', 'G_TC', 'blocked_nodes', 'FFs', 'LUTs', 'subLUTs', 'CD', 'CUTs', 'tried_pips', 'start_TC_time')
-    def __init__(self, device, TC_idx):
+    __slots__ = ('G', 'TC_idx', 'G_TC', 'blocked_nodes', 'reconst_blocked_nodes', 'FFs', 'LUTs', 'subLUTs', 'CD', 'CUTs', 'tried_pips', 'start_TC_time')
+    def __init__(self, device, TC_idx, prev_TC=None):
         self.G                      = copy.deepcopy(device.G)
         self.TC_idx                 = TC_idx
         self.G_TC                   = nx.DiGraph()
         self.blocked_nodes          = set()
-        self.FFs                    = self.create_FFs(device)
-        self.LUTs                   = self.create_LUTs(device)
-        self.subLUTs                = self.create_subLUTs(device)
-        self.CD                     = []     # set in test_collection
+        self.reconst_blocked_nodes  = set()
+        self.FFs                    = self.create_FFs(device, prev_TC)
+        self.LUTs                   = self.create_LUTs(device, prev_TC)
+        self.subLUTs                = self.create_subLUTs(device, prev_TC)
+        self.CD                     = prev_TC.CD.copy() if (prev_TC is not None) else []     # set in test_collection
         self.CUTs                   = []
         self.tried_pips             = set()
         self.start_TC_time          = time.time()
+        self.get_reconst_blocked_nodes(prev_TC)
+        #self.validate()
 
 
     def __repr__(self):
         return f'TC{self.TC_idx}'
+
+    def validate(self):
+        FF_nodes = list(filter(lambda node: nd.get_clb_node_type(node) in {'FF_in', 'FF_out'}, self.G))
+        for node in FF_nodes:
+            assert f'{nd.get_tile(node)}/{nd.get_label(node)}FF' in self.FFs or f'{nd.get_tile(node)}/{nd.get_label(node)}FF2' in self.FFs, f'{node}: {nd.get_tile(node)}/{nd.get_label(node)}FF'
+
+        LUT_nodes = list(filter(lambda node: nd.get_clb_node_type(node) in {'LUT_in', 'CLB_out', 'CLB_muxed'}, self.G))
+        for node in LUT_nodes:
+            assert f'{nd.get_tile(node)}/{nd.get_label(node)}LUT' in self.LUTs, f'{node}: {nd.get_tile(node)}/{nd.get_label(node)}LUT'
+            #assert f'{nd.get_tile(node)}/{nd.get_label(node)}5LUT' in self.subLUTs, f'{node}: {nd.get_tile(node)}/{nd.get_label(node)}5LUT'
+            #assert f'{nd.get_tile(node)}/{nd.get_label(node)}6LUT' in self.subLUTs, f'{node}: {nd.get_tile(node)}/{nd.get_label(node)}6LUT'
 
     def filter_nodes(self, **attributes):
         return (node for node in self.G if all(nd.__dict__[attr](node) == value for attr, value in attributes.items()))
@@ -108,7 +122,7 @@ class MinConfig:
                 self.reset_global_subLUTs(path.subLUTs)
                 self.reset_global_FFs(path.FFs)
             # 2- unblock path
-            self.unblock_path(path)
+            self.unblock_path(path, test_collection.device)
 
 
         self.CUTs.remove(cut)
@@ -130,6 +144,12 @@ class MinConfig:
             self.block_global_subLUTs(cut.subLUTs)
             self.block_global_FFs(cut.FFs)
 
+        # block LUTs
+        #print(set(self.LUTs.values()))
+        for lut in self.LUTs.values():
+            lut.block_usage()
+        #Parallel(n_jobs=cfg.n_jobs, require='sharedmem')(delayed(lut.block_usage()) for lut in self.LUTs.values())
+
         # increase cost
         main_path = cut.main_path
         desired_pip_weight = 1 / len(main_path)
@@ -143,17 +163,62 @@ class MinConfig:
         self.blocked_nodes = set()
 
     ########## Primitives ############################
-    @staticmethod
-    def create_FFs(device):
-        return {ff.name: ff for ff in device.get_FFs()}
+    def create_FFs(self, device, prev_TC=None):
+        FFs = device.get_FFs()
+
+        used_FFs = set()
+        invalid_FFs = set()
+        if prev_TC is not None:
+            used_FFs = set(prev_TC.FFs.values())
+
+            # FFs with associated blocked LUT
+            blocked_LUTs = {lut for _, lut in prev_TC.LUTs.items() if lut.capacity == 0}
+            for lut in blocked_LUTs:
+                invalid_FFs.update(ff for ff in FFs if ff.tile == lut.tile and ff.label == lut.label)
+
+        # block used & invalid FF nodes
+        self.reconst_blocked_nodes.update(node for ff in invalid_FFs for node in ff.get_nodes())
+        self.reconst_blocked_nodes.update(node for ff in used_FFs for node in ff.get_nodes())
+
+        return {ff.name: ff for ff in FFs if ff not in used_FFs.union(invalid_FFs)}
+
+    def create_LUTs(self, device, prev_TC=None):
+        LUTs = {}
+        blocked_LUTs = set()
+        partial_LUTs = set()
+        if prev_TC is not None:
+            blocked_LUTs = {lut for _, lut in prev_TC.LUTs.items() if lut.capacity == 0}
+            partial_LUTs = {lut for _, lut in prev_TC.LUTs.items() if lut.capacity == 1}
+
+        for lut in device.get_LUTs():
+            if lut.name in {blocked_lut.name for blocked_lut in blocked_LUTs}:
+                continue
+
+            if prev_TC is not None:
+                # Copy partially filled LUTs from prev_TC
+                if lut in prev_TC.LUTs.values():
+                    lut = prev_TC.LUTs[lut.name]
+
+            lut.prev_capacity = lut.capacity
+            LUTs[lut.name] = lut
+
+        # block used & blocked LUT nodes
+        self.reconst_blocked_nodes.update(node for lut in blocked_LUTs for node in lut.get_nodes())
+        self.reconst_blocked_nodes.update(node for lut in partial_LUTs for node in lut.get_partial_block_nodes())
+
+        return LUTs
+        #return {lut.name: lut for lut in device.get_LUTs() if lut not in blocked_LUTs}
 
     @staticmethod
-    def create_LUTs(device):
-        return {lut.name: lut for lut in device.get_LUTs()}
+    def create_subLUTs(device, prev_TC=None):
+        used_subLUTs = set()
+        blocked_LUTs = set()
+        if prev_TC is not None:
+            blocked_LUTs = {lut_name for lut_name, lut in prev_TC.LUTs.items() if lut.capacity == 0}
+            used_subLUTs = {sublut.name for _, lut in prev_TC.LUTs.items() for sublut in lut.subLUTs}
 
-    @staticmethod
-    def create_subLUTs(device):
-        return {sublut.name: sublut for sublut in device.get_subLUTs()}
+        return {sublut.name: sublut for sublut in device.get_subLUTs() if (sublut.name not in used_subLUTs) and
+                sublut.get_LUT_name() not in blocked_LUTs}
 
     def get_subLUT_occupancy(self, output, *inputs):
         cond_single_mode = not cfg.LUT_Dual
@@ -165,7 +230,6 @@ class MinConfig:
 
     def get_subLUT_bel(self, output, *inputs):
         occupancy = self.get_subLUT_occupancy(output, *inputs)
-        #LUT_primitive = next(self.filter_LUTs(name=nd.get_bel(inputs[0])))
         LUT_primitive = self.LUTs[nd.get_bel(inputs[0])]
         if occupancy == 2:
             bel = '6LUT'
@@ -197,7 +261,11 @@ class MinConfig:
         cut = self.CUTs[-1]
         for ff_node in path.get_FF_nodes():
             #FF_primitive = next(self.filter_FFs(name=nd.get_bel(ff_node)))
-            FF_primitive = self.FFs[nd.get_bel(ff_node)]
+            try:
+                FF_primitive = self.FFs[nd.get_bel(ff_node)]
+            except:
+                breakpoint()
+
             FF_primitive.set_usage(ff_node)
             path.FFs.add(FF_primitive)
             cut.FFs.add(FF_primitive)
@@ -210,12 +278,37 @@ class MinConfig:
         for FF_primitive in path.FFs:
             FF_primitive.block_usage()
 
-    def get_global_subLUTs(self, *subLUTs):
+    def get_global_subLUTs2(self, *subLUTs):
         global_subLUTs = set()
         for subLUT in subLUTs:
             port = subLUT.port
             direction = subLUT.direction
             global_subLUTs.update(self.filter_subLUTs(port=port, direction=direction))
+
+            # In iterations > 1 partially filled LUTs could cause problems
+            LUT_capacity = self.LUTs[subLUT.get_LUT_name()].capacity + subLUT.get_occupancy()
+            global_subLUTs = set(filter(lambda x: self.LUTs[x.get_LUT_name()].capacity >= LUT_capacity, global_subLUTs))
+
+        return global_subLUTs
+
+    def get_global_subLUTs(self, *subLUTs):
+        global_subLUTs = set()
+        for subLUT in subLUTs:
+            label = subLUT.label
+            direction = subLUT.direction
+            global_LUT_primitives = self.filter_LUTs(label=label, direction=direction)
+            for lut in global_LUT_primitives:
+                if lut.capacity > 0:
+                    try:
+                        global_subLUTs.add(self.subLUTs[lut.get_subLUT_name()])
+                        #global_subLUTs = [self.subLUTs[lut.get_subLUT_name()] for lut in global_LUT_primitives if lut.capacity > 0]
+                    except:
+                        breakpoint()
+
+            # In iterations > 1 partially filled LUTs could cause problems
+            LUT_primitive = self.LUTs[subLUT.get_LUT_name()]
+            LUT_capacity = LUT_primitive.capacity + subLUT.get_occupancy()
+            global_subLUTs = set(filter(lambda x: self.LUTs[x.get_LUT_name()].capacity >= LUT_capacity, global_subLUTs))
 
         return global_subLUTs
 
@@ -232,8 +325,12 @@ class MinConfig:
         for subLUT in subLUTs:
             global_subLUTs = self.get_global_subLUTs(subLUT)
             global_subLUTs = {sublut for sublut in global_subLUTs if sublut.name != subLUT.name}
-            Parallel(n_jobs=-1, require='sharedmem')(delayed(global_subLUT.global_set)(tiles_map, subLUT) for global_subLUT in global_subLUTs)
-            Parallel(n_jobs=-1, require='sharedmem')(delayed(global_subLUT.add_to_LUT)(self) for global_subLUT in global_subLUTs)
+            #Parallel(n_jobs=-1, require='sharedmem')(delayed(global_subLUT.global_set)(tiles_map, subLUT) for global_subLUT in global_subLUTs)
+            for global_subLUT in global_subLUTs:
+                global_subLUT.global_set(tiles_map, subLUT)
+            #Parallel(n_jobs=-1, require='sharedmem')(delayed(global_subLUT.add_to_LUT)(self) for global_subLUT in global_subLUTs)
+            for global_subLUT in global_subLUTs:
+                global_subLUT.add_to_LUT(self)
 
     def reset_global_subLUTs(self, subLUTs):
         for subLUT in subLUTs:
@@ -250,7 +347,9 @@ class MinConfig:
         for ff in FFs:
             global_FFs = self.get_global_FFs(ff)
             global_FFs = {global_FF for global_FF in global_FFs if global_FF.name != ff.name}
-            Parallel(n_jobs=-1, require='sharedmem')(delayed(global_FF.global_set)(tiles_map, ff) for global_FF in global_FFs)
+            #Parallel(n_jobs=-1, require='sharedmem')(delayed(global_FF.global_set)(tiles_map, ff) for global_FF in global_FFs)
+            for global_FF in global_FFs:
+                global_FF.global_set(tiles_map, ff)
 
     def reset_global_FFs(self, FFs):
         for ff in FFs:
@@ -269,7 +368,7 @@ class MinConfig:
             LUT_inputs = {nd.get_LUT_input(tile, label, idx) for idx in range(1, 6)}
             self.blocked_nodes.update(LUT_inputs)
 
-    def unblock_LUTs(self):
+    def unblock_LUTs(self, device):
         freed_LUTs = self.filter_LUTs(has_freed=True)
         edges = set()
         for freed_LUT in freed_LUTs:
@@ -289,9 +388,32 @@ class MinConfig:
                        and self.FFs[nd.get_bel(node)].usage == 'free'}
             edges.update(set(product({cfg.virtual_source_node}, sources)))
 
-        self.G.add_edges_from(edges)
+        self.add_edges(*edges, weight=0)
 
     ########## Block nodes & edges ####################
+    def get_reconst_blocked_nodes(self, prev_TC=None):
+        if prev_TC is None:
+            return
+
+        else:
+            used_nodes = {f'{tile}/{port}' for tile, ports in prev_TC.used_nodes.items() for port in ports}
+            self.reconst_blocked_nodes.update(used_nodes & set(self.G))
+
+            '''blocked_LUTs = {lut for _, lut in prev_TC.LUTs.items() if lut.capacity==0}
+            partial_LUTs = {lut for _, lut in prev_TC.LUTs.items() if lut.capacity==1}'''
+
+            # block used & blocked LUT nodes
+            '''self.reconst_blocked_nodes.update(node for lut in blocked_LUTs for node in lut.get_nodes())
+            self.reconst_blocked_nodes.update(node for lut in partial_LUTs for node in lut.get_partial_block_nodes())'''
+
+            # block used & invalid FF nodes
+            '''invalid_FFs = {self.FFs[f'{lut.tile}/{lut.label}FF{suffix}'] for lut in blocked_LUTs
+                           for suffix in {'', '2'} if f'{lut.tile}/{lut.label}FF{suffix}' in self.FFs}
+            self.reconst_blocked_nodes.update(node for ff in invalid_FFs for node in ff.get_nodes(index=1))
+            self.reconst_blocked_nodes.update(node for ff in invalid_FFs for node in ff.get_nodes(index=2))'''
+
+            self.G.remove_nodes_from(self.reconst_blocked_nodes)
+
     def block_path(self, path):
         nodes = set(path)
         if cfg.block_mode == 'global':
@@ -307,7 +429,7 @@ class MinConfig:
                 self.blocked_nodes.update(self.get_global_nodes(nd.get_MUXED_CLB_out(tile, label)))
                 self.block_LUTs()
 
-    def unblock_path(self, path):
+    def unblock_path(self, path, device):
         # MUXED_CLB_out and LUT_in6 must be unblocked in unblock_LUTs
         nodes = {node for node in path if not (cfg.LUT_in6_pattern.match(node) and cfg.MUXED_CLB_out_pattern.match(node))}
         if cfg.block_mode == 'global':
@@ -317,7 +439,7 @@ class MinConfig:
         self.blocked_nodes -= nodes
 
         if any(map(lambda node: nd.get_clb_node_type(node) == 'LUT_in', path)):
-            self.unblock_LUTs()
+            self.unblock_LUTs(device)
 
     def block_source_sink(self, path):
         if path.type == 'path_not':
@@ -372,14 +494,17 @@ class MinConfig:
                         srcs = self.get_global_nodes(node)
                         for src in srcs.copy():
                             LUT_name = re.sub('FF2*$', 'LUT', nd.get_bel(src))
-                            if self.LUTs[LUT_name].capacity == 0:
-                                srcs.remove(src)
+                            try:
+                                if self.LUTs[LUT_name].capacity == 0:
+                                    srcs.remove(src)
+                            except:
+                                breakpoint()
 
                         edges.update(set(product({CD.src_sink_node}, srcs)))
                     if CD.type == 'sink':
                         edges.update(set(product(self.get_global_nodes(node), {CD.src_sink_node})))
 
-        self.G.add_edges_from(edges)
+        self.add_edges(*edges, weight=0)
 
 
         '''edges = set()
@@ -404,8 +529,8 @@ class MinConfig:
             if edge[1] in self.G_TC:
                 continue
 
-            '''if {edge[0], edge[1]} & self.reconst_blocked_nodes:
-                continue'''
+            if {edge[0], edge[1]} & self.reconst_blocked_nodes:
+                continue
 
             if edge[1] in self.blocked_nodes:
                 continue
@@ -413,7 +538,7 @@ class MinConfig:
             if weight is None:
                 try:
                     weight = device.G.get_edge_data(*edge)['weight']
-                except TypeError:
+                except:
                     breakpoint()
 
             self.G.add_edge(*edge, weight=weight)
@@ -550,7 +675,7 @@ class MinConfig:
             test_collection.clean_pip_v_node(self.G)
 
             # create a CUT
-            coord = nd.get_coordinate(test_collection.desired_tile)
+            coord = nd.get_coordinate(test_collection.origin)
             self.create_CUT(coord)
 
             # pick a pip
@@ -593,7 +718,7 @@ class MinConfig:
     def inc_cost(self, test_collection, main_path, desired_pip_weight, default_weight=0.5):
         edges = set()
         device = test_collection.device
-        desired_tile = test_collection.desired_tile
+        desired_tile = test_collection.origin
 
         for edge in main_path.get_edges():
             if cfg.block_mode == 'global':
