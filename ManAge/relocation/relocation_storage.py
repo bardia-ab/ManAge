@@ -1,4 +1,4 @@
-import os, re
+import os, re, shutil
 from pathlib import Path
 from dataclasses import dataclass, field
 from tqdm import tqdm
@@ -11,33 +11,38 @@ import utility.config as cfg
 
 @dataclass
 class RLOC_Collection:
-    device          :   Arch
-    iteration       :   int
-    #desired_tile    :   str
-    overwrite       :   bool    = field(default = True)
-    covered_pips    :   dict    = field(default_factory = dict)
-    #TC              :   Config  = field(default=None)
-    TC_idx          :   int     = field(default = 0)
-    pbar            :   tqdm    = field(default = None)
-    minimal_configs :   list    = field(default_factory = list)
+    device              :   Arch
+    origin              :   str
+    minimal_config_dir  :   str
+    prev_config_dir     :   str
+    config_dir          :   str
+    overwrite           :   bool    = field(default = True)
+    covered_pips        :   dict    = field(default_factory = dict)
+    TC_idx              :   int     = field(default = 0)
+    pbar                :   tqdm    = field(default = None)
+    minimal_configs     :   list    = field(default_factory = list)
+    origins             :   list    = field(default_factory=list)
 
 
     def __post_init__(self):
-        # create the iteration folder
-        cfg.config_path = os.path.join(cfg.config_path, f'iter{self.iteration}')
-        if not os.path.exists(cfg.config_path) or self.overwrite:
-            util.create_folder(cfg.config_path)
+        # create the store path directory
+        Path(self.config_dir).mkdir(parents=True, exist_ok=True)
+
+        # add origin
+        self.origins.append(self.origin)
 
         # set minimal_configs files
-        cfg.minimal_config_path = os.path.join(cfg.minimal_config_path, f'iter{self.iteration}')
-        self.minimal_configs = list(filter(lambda file: file.startswith('TC'), os.listdir(cfg.minimal_config_path)))
-        self.minimal_configs.sort(key=lambda x: int(re.findall('\d+', x).pop()))
+        self.minimal_configs = list(Path(self.minimal_config_dir).glob('TC*'))
+        self.minimal_configs.sort(key=lambda x: int(re.findall('\d+', x.stem).pop()))
+
+        #load covered_pips
+        if self.prev_config_dir is not None:
+            prev_rloc_collection = util.load_data(self.prev_config_dir, 'rloc_collection.data')
+            self.covered_pips = prev_rloc_collection.covered_pips.copy()
 
         # create pbar
         length = len(self.minimal_configs)
         self.create_pbar(length)
-
-        #self.LUTs = self.create_LUTs()
 
     def __getstate__(self):
         state = self.__dict__.copy()  # Copy the dict to avoid modifying the original
@@ -69,27 +74,25 @@ class RLOC_Collection:
         self.pbar.update(1)
         self.TC_idx += 1
 
-    def create_TC(self):
-        if self.iteration == 1:
+    def create_TC(self, file_name):
+        if self.prev_config_dir is None:
             TC = Config()
-        elif (Path(cfg.Data_path) / 'rloc_collection.data').exists():
-            prev_rloc_collection = util.load_data(cfg.Data_path, 'rloc_collection.data')
-            self.covered_pips = prev_rloc_collection.covered_pips.copy()
 
-            if len(prev_rloc_collection.minimal_configs) < self.pbar.total:
+        else:
+            self.TC_idx = int(re.findall('\d+', file_name)[0])
+            if file_name not in os.listdir(self.prev_config_dir):
                 TC = Config()
             else:
-                TC = util.load_data(cfg.config_path, f'TC{self.TC_idx}.data')
-        else:
-            return Config()
+                TC = util.load_data(self.prev_config_dir, file_name)
+
 
         return TC
 
     def fill_TC(self, file):
-        minimal_TC = util.load_data(cfg.minimal_config_path, file)
-        TC = self.create_TC()
+        minimal_TC = util.load_data(str(file.parent), file.name)
+        TC = self.create_TC(file.name)
         TC.fill_D_CUTs(self, minimal_TC)
-        util.store_data(cfg.config_path, f'TC{self.TC_idx}.data', TC)
+        util.store_data(self.config_dir, f'TC{self.TC_idx}.data', TC)
         self.update_pbar()
 
     def update_coverage(self, edges):
@@ -101,16 +104,25 @@ class RLOC_Collection:
 
     def get_pips_length_dict(self):
         uncovered_pips_length = {}
-        for INT_tile in self.device.get_INTs():
-            coordinate = nd.get_coordinate(INT_tile)
+        coordinates = self.device.get_coords()
+        for coordinate in coordinates:
+            INT_tile = f'INT_{coordinate}'
             N_pips = cfg.n_pips_two_CLB if all(map(lambda tile: tile is not None, self.device.tiles_map[coordinate].values())) else cfg.n_pips_one_CLB
-            #uncovered_pips_length[INT_tile] = N_pips - len(self.covered_pips[INT_tile])
             uncovered_pips_length[INT_tile] = N_pips
 
         return uncovered_pips_length
 
     def get_coverage(self):
         total_pips = sum(self.get_pips_length_dict().values())
-        covered_pips = sum(len(v) for k, v in self.covered_pips.items() if k.startswith('INT'))
+        covered_pips = sum(len(v) for k, v in self.covered_pips.items() if k.startswith('INT') and nd.get_coordinate(k)
+                           in self.device.get_coords())
 
-        return f'Coverage: {covered_pips / total_pips * 100:.2}%'
+        return f'Coverage: {covered_pips / total_pips:.2%}'
+
+    def copy_missing_conf_files(self):
+        if self.prev_config_dir is not None:
+            missing_files = set(os.listdir(self.prev_config_dir)) - set(os.listdir(self.config_dir))
+            for file in missing_files:
+                src = os.path.join(self.prev_config_dir, file)
+                dst = os.path.join(self.config_dir, file)
+                shutil.copy(src, dst)
