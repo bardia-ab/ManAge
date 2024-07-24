@@ -1,15 +1,19 @@
 import os, sys, json
 import re
 from pathlib import Path
-sys.path.append(str(Path(__file__).absolute().parent.parent))
-os.chdir(str(Path(__file__).absolute().parent.parent))
+if not (Path(os.getcwd()).parts[-1] == Path(os.getcwd()).parts[-2] == 'ManAge'):
+    sys.path.append(str(Path(__file__).parent.parent))
+    os.chdir(str(Path(__file__).parent.parent))
 
 from tqdm import tqdm
+from joblib import Parallel, delayed
 from xil_res.architecture import Arch
 from xil_res.minimal_config import MinConfig
+from xil_res.clock_domain import ClockDomain, ClockGroup
 from relocation.configuration import Config
 from xil_res.cut import CUT
 import utility.utility_functions as util
+import utility.config as cfg
 
 
 # USer Inputs
@@ -20,9 +24,6 @@ mode = sys.argv[4]
 
 # create device
 device = Arch(device_name)
-
-# create store path
-Path(store_path).mkdir(parents=True, exist_ok=True)
 
 #retrieve JSON files
 json_files = list(Path(json_path).glob('*.json'))
@@ -57,12 +58,26 @@ for json_file in json_files:
         else:
             TC.D_CUTs.append(cut)
 
+    # set CD
+    conf_CD = configuration[cut_label]['CD']
+    for CG, CD in conf_CD.items():
+        clock_group = ClockGroup(CG)
+        if CD is not None:
+            clock_group.CD.set(CD, cfg.clock_domains[CD], cfg.src_sink_node[CD], cfg.clock_domain_types[CD])
+            clock_group.conflict.add(cfg.clock_groups[CG])
+
+        TC.CD.append(clock_group)
+
     # remove unused primitives
     TC.FFs = list(TC.filter_FFs(usage='used'))
     TC.LUTs = list(TC.filter_LUTs(usage='used'))
     TC.subLUTs = list(TC.filter_subLUTs(usage='used'))
 
-    # store
+    # block usage
+    Parallel(n_jobs=cfg.n_jobs, require='sharedmem')(delayed(ff.block_usage()) for ff in TC.FFs)
+    Parallel(n_jobs=cfg.n_jobs, require='sharedmem')(delayed(sublut.block_usage()) for sublut in TC.subLUTs)
+    Parallel(n_jobs=cfg.n_jobs, require='sharedmem')(delayed(lut.block_usage()) for lut in TC.LUTs)
+
     output_file = f'{Path(json_file).stem}.data'
     util.store_data(store_path, output_file, TC)
 
