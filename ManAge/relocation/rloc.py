@@ -22,8 +22,8 @@ class RLOC:
         return RLOC_tile
 
     @staticmethod
-    def get_DLOC_tile(tiles_map, RLOC_tile: str, D_origin: str) -> str|None:
-        D_coord = nd.get_DLOC_coord(RLOC_tile, D_origin)
+    def get_DLOC_tile(tiles_map, RLOC_tile: str, target_origin: str) -> str|None:
+        D_coord = nd.get_DLOC_coord(RLOC_tile, target_origin)
 
         if D_coord not in tiles_map:
             DLOC_tile = None
@@ -39,7 +39,7 @@ class RLOC:
 
     @staticmethod
     def check_tile_compliance(tiles_map, nodes, origin:str, D_origin: str) -> bool:
-        tiles = RLOC.extract_path_tiles(nodes)
+        tiles = (nd.get_tile(node) for node in nodes)
         RLOC_tiles = {RLOC.get_RLOC_tile(tile, origin) for tile in tiles}
         DLOC_tiles = {RLOC.get_DLOC_tile(tiles_map, RLOC_tile, D_origin) for RLOC_tile in RLOC_tiles}
 
@@ -66,12 +66,4 @@ class RLOC:
 
         return all(map(lambda wire: wire[0] is not None and wire in wires_dict[nd.get_tile(wire[0])], DLOC_wires))
 
-    class DLOC:
-        def __init__(self, cut: CUT, idx: int):
-            self.index = idx
-            self.FFs = set()
-            self.subLUTs = set()
-            self.G = None
-            self.origins = set()
-            self.D_CUTs = set()
 
