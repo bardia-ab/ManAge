@@ -1,5 +1,7 @@
 import copy
+import re
 import sys, time, os
+from pathlib import Path
 import networkx as nx
 #sys.path.insert(0, r'..\utility')
 from typing import Set, Tuple
@@ -187,6 +189,9 @@ class Arch:
         return G
 
     def set_compressed_graph(self, tile: str, default_weight=1):
+        if re.match('X\d+Y\d+', tile):
+            tile = f'INT_{tile}'
+
         if not (f'G_{self.name}_{tile}.data' in os.listdir(cfg.graph_path)):
             x, y = nd.get_x_coord(tile), nd.get_y_coord(tile)
             xlim_down, xlim_up, ylim_down, ylim_up = (x - 12 - 4), (x + 12 + 4), (y - 12 - 4), (y + 12 + 4)
@@ -311,10 +316,11 @@ class Arch:
 
         return covered_pips
 
-    def get_pips(self, desired_tile, mode='all'):
+    def get_pips(self, origin, local=False):
+        desired_tile = f'INT_{origin}'
         self.set_pips_length_dict(desired_tile)
 
-        if mode == 'local':
+        if local:
             pips = self.get_local_pips(desired_tile)
 
             # remove nodes whose coordinates are different from desired_tile
@@ -343,7 +349,7 @@ class Arch:
             self.G.get_edge_data(*edge)['weight'] = weight
 
     def reset_costs(self, test_collection):
-        desired_tile, queue = test_collection.desired_tile, test_collection.queue
+        desired_tile, queue = test_collection.origin, test_collection.queue
         for edge in self.G.edges:
             weight = self.weight(*edge, self.G.get_edge_data(*edge))
             if Edge(edge).get_type() == 'pip' and nd.get_tile(edge[0]) == desired_tile and edge not in queue:
@@ -365,12 +371,21 @@ class Arch:
             raise ValueError(f'{list(self.tiles_map[coordinate].values())}')
 
     def get_device_dimension(self):
-        device_coords = {coord for CR in self.CRs for coord in CR.coords}
+        device_coords = self.get_coords()
         x_coords = {nd.get_x_coord(coord) for coord in device_coords}
         y_coords = {nd.get_y_coord(coord) for coord in device_coords}
 
         return min(x_coords), max(x_coords), min(y_coords), max(y_coords)
 
+    def get_coords(self):
+        return {coord for CR in self.CRs for coord in CR.coords}
+
+    @staticmethod
+    def get_models():
+        model_dir = Path(__file__).parent.parent.parent / 'models'
+        models = [model.stem.split('_')[-1] for model in model_dir.iterdir()]
+
+        return models
 
 
 if __name__ == '__main__':

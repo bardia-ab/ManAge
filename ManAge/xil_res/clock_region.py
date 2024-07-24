@@ -26,3 +26,11 @@ class CR:
             tiles = set(filter(lambda x: nd.get_coordinate(x) in self.coords, device.get_INTs() | device.get_CLBs()))
 
         return tiles
+
+    def get_borders(self):
+        x_min = min(nd.get_x_coord(coord) for coord in self.coords)
+        x_max = max(nd.get_x_coord(coord) for coord in self.coords)
+        y_min = min(nd.get_y_coord(coord) for coord in self.coords)
+        y_max = max(nd.get_y_coord(coord) for coord in self.coords)
+
+        return x_min, x_max, y_min, y_max

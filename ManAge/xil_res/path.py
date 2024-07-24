@@ -125,7 +125,6 @@ class Path:
             LUT_func = self.get_LUT_func(LUT_in)
 
             sublut_name = f'{nd.get_tile(LUT_in)}/{nd.get_label(LUT_in)}{TC.get_subLUT_bel(LUT_output, LUT_in)}'
-            #subLUT = next(TC.filter_subLUTs(name=sublut_name))
             subLUT = TC.subLUTs[sublut_name]
             subLUT.fill(LUT_output, LUT_func, LUT_in)
             subLUTs.add(subLUT)
@@ -449,6 +448,10 @@ class MainPath(Path):
 
 
     def route(self, test_collection):
+        if (self.path_in.sink != self.pip[0] and self.path_out.src != self.pip[1]):
+            self.path_in.sink = self.pip[0]
+            self.path_out.src = self.pip[1]
+
         TC = test_collection.TC
         pips = test_collection.queue
         self.prev_CD = copy.deepcopy(TC.CD)
