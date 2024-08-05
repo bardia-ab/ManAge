@@ -36,9 +36,9 @@ class Node:
         if exact:
             end_idx = re.search('_X-*\d+Y-*\d+', node).regs[0][0]
             tile_type = Node.get_tile(node)[: end_idx]
-        elif node.startswith('INT'):
-            tile_type = 'INT'
-        elif node.startswith('CLE'):
+        elif node.startswith(cfg.INT_label):
+            tile_type = cfg.INT_label
+        elif node.startswith(cfg.CLB_label):
             tile_type = 'CLB'
         else:
             tile_type = None
@@ -55,7 +55,7 @@ class Node:
         :return: The site type (CLB node) or None (INT node)
         :rtype: str | None
         """
-        if Node.get_tile_type(node) == 'INT':
+        if Node.get_tile_type(node) == cfg.INT_label:
             return None
         elif Node.get_tile_type(node) == 'CLB':
             if node.startswith('CLEM'):
@@ -75,7 +75,7 @@ class Node:
         :return: The direction of the node's tile in a coordinate or None
         :rtype: str
         """
-        if Node.get_tile_type(node) == 'INT':
+        if Node.get_tile_type(node) == cfg.INT_label:
             direction = 'C'
         elif Node.get_tile_type(node) == 'CLB':
             if re.match(cfg.East_CLB, node):
@@ -153,6 +153,38 @@ class Node:
         """
         return int(re.findall('-*\d+', Node.get_coordinate(node))[1])
 
+    @staticmethod
+    def get_borders_coords(*coords):
+        x_coords = {Node.get_x_coord(coord) for coord in coords}
+        y_coords = {Node.get_y_coord(coord) for coord in coords}
+
+        return (min(x_coords), min(y_coords)), (max(x_coords), max(y_coords))
+
+    @staticmethod
+    def is_tile_in_rectangle(bottom_left, top_right, tile):
+        """
+        Check if a given point lies within a rectangle defined by bottom-left and top-right coordinates.
+
+        :param bottom_left: A tuple (x, y) representing the coordinates of the bottom-left corner of the rectangle.
+        :type bottom_left: tuple
+        :param top_right: A tuple (x, y) representing the coordinates of the top-right corner of the rectangle.
+        :type top_right: tuple
+        :param tile: A tile name.
+        :type tile: str
+
+        :return: True if the point lies within the rectangle, False otherwise.
+        :rtype: bool
+        """
+        (x1, y1) = bottom_left
+        (x2, y2) = top_right
+        (px, py) = Node.get_x_coord(tile), Node.get_y_coord(tile)
+
+        # Check if the point is within the bounds of the rectangle
+        if x1 <= px <= x2 and y1 <= py <= y2:
+            return True
+
+        return False
+
     ######### Port Methods ##########
     @staticmethod
     def get_port(node: str, delimiter='/') -> str:
@@ -177,7 +209,7 @@ class Node:
         :return: The label (CLB node) or None (INT node)
         :rtype: str | None
         """
-        if Node.get_tile_type(node) == 'INT':
+        if Node.get_tile_type(node) == cfg.INT_label:
             return None
         elif Node.get_tile_type(node) == 'CLB':
             return node.split('_SITE_0_')[-1][0]
@@ -194,7 +226,7 @@ class Node:
         :return: The suffix (CLB node) or None (INT node)
         :rtype: str | None
         """
-        if Node.get_tile_type(node) == 'INT':
+        if Node.get_tile_type(node) == cfg.INT_label:
             return None
         elif Node.get_tile_type(node) == 'CLB':
             return node.split('_SITE_0_')[-1]
@@ -211,7 +243,7 @@ class Node:
         :return: The prefix (CLB node) or None (INT node)
         :rtype: str | None
         """
-        if Node.get_tile_type(node) == 'INT':
+        if Node.get_tile_type(node) == cfg.INT_label:
             return None
         elif Node.get_tile_type(node) == 'CLB':
             return f'CLE_CLE_{Node.get_site_type(node)}_SITE_0'
@@ -249,7 +281,7 @@ class Node:
         :return: The primitive (CLB node) or None (other types of nodes)
         :rtype: str | None
         """
-        if Node.get_tile_type(node) == 'INT':
+        if Node.get_tile_type(node) == cfg.INT_label:
             return None
         elif Node.get_clb_node_type(node) == 'LUT_in':
             return 'LUT'
@@ -465,8 +497,8 @@ class Node:
         :return: _description_
         :rtype: str
         """
-        if Node.get_tile_type(node) == 'INT':
-            pattern = f'INT_X.*{Node.get_port(node)}'
+        if Node.get_tile_type(node) == cfg.INT_label:
+            pattern = f'{cfg.INT_label}_X.*{Node.get_port(node)}'
         else:
             tile = cfg.East_CLB.pattern if Node.get_direction(node) == 'E' else cfg.West_CLB.pattern
             port_suffix = Node.get_port_suffix(node)
@@ -521,9 +553,9 @@ class Node:
         :return: The RLOC tile
         :rtype: str
         """
-        if Node.get_tile_type(tile) == 'INT':
+        if Node.get_tile_type(tile) == cfg.INT_label:
             RLOC_coord = Node.get_RLOC_coord(tile, origin)
-            RLOC_tile = f'INT_{RLOC_coord}'
+            RLOC_tile = f'{cfg.INT_label}_{RLOC_coord}'
         elif Node.get_tile_type(tile) == 'CLB':
             direction = Node.get_direction(tile)
             RLOC_coord = Node.get_RLOC_coord(tile, origin)
@@ -542,7 +574,7 @@ class Node:
         :return: The RLOC port
         :rtype: str
         """
-        if port.startswith('CLE'):
+        if port.startswith(cfg.CLB_label):
             RLOC_port = port.split('_SITE_0_')[-1]
         else:
             RLOC_port = port
@@ -584,7 +616,7 @@ class Node:
         if D_coord not in tiles_map:
             return None
 
-        if Node.get_tile_type(RLOC_node) == 'INT':
+        if Node.get_tile_type(RLOC_node) == cfg.INT_label:
             tile = f'INT_{D_coord}'
             port = Node.get_port(RLOC_node)
         else:
