@@ -33,6 +33,13 @@ pips_length_dict = {}
 
 
 ########### regex patterns
+INT_pattern = re.compile((config['Regex']['INT']))
+INT_label = INT_pattern.pattern[1:4]
+CLB_pattern = re.compile((config['Regex']['CLB']))
+CLB_label = CLB_pattern.pattern[1:3]
+BRAM_pattern = re.compile((config['Regex']['BRAM']))
+BRAM_label = BRAM_pattern.pattern[1:4]
+HCS_tile_label = config['Regex']['HCS_tile_label']
 LUT_in_pattern = re.compile(config['Regex']['LUT_in_pattern'])
 LUT_in6_pattern = re.compile(config['Regex']['LUT_in6_pattern'])
 FF_in_pattern = re.compile(config['Regex']['FF_in_pattern'])

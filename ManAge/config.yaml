@@ -18,6 +18,10 @@ General:
   route_thru    : True
 
 Regex:
+  INT                           : ^INT_X\d+Y\d+$
+  CLB                           : ^CLE(L_[LR]|M(_R)?)_X\d+Y\d+$
+  BRAM                          : ^BRAM_X\d+Y\d+$
+  HCS_tile_label                : RCLK
   LUT_in_pattern                : ^CLE.*_[A-H][1-6]$
   LUT_in6_pattern               : ^CLE.*_[A-H]6$
   FF_in_pattern                 : ^CLE.*_[A-H][_XI]+$
