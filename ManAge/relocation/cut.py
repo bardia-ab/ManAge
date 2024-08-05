@@ -173,8 +173,8 @@ class D_CUT(CUT):
         return DLOC_G
 
     def get_DLOC_node(self, tiles_map, RLOC_node):
-        if nd.get_tile_type(RLOC_node) == 'INT':
-            tile = f'INT_{self.origin}'
+        if nd.get_tile_type(RLOC_node) == cfg.INT_label:
+            tile = f'{cfg.INT_label}_{self.origin}'
             port = nd.get_port(RLOC_node)
         else:
             direction = RLOC_node.split('_')[1]

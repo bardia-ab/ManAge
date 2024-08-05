@@ -15,31 +15,12 @@ import concurrent.futures
 
 @dataclass
 class Config:
-    #device      :   Any     = field(default=None, repr=False, init=True)
     used_nodes  :   dict    = field(default_factory = dict)
     D_CUTs      :   List    = field(default_factory = list)
     CD          :   dict    = field(default_factory = dict)
     subLUTs     :   dict     = field(default_factory = dict)
     LUTs        :   dict     = field(default_factory = dict)
     FFs         :   dict     = field(default_factory = dict)
-
-
-    '''def __post_init__(self):
-        if self.device:
-            self.FFs = self.create_FFs(self.device)
-            self.LUTs = self.create_LUTs(self.device)
-            self.subLUTs = self.create_subLUTs(self.device)
-            del self.device'''
-
-    '''def __getstate__(self):
-        state = self.__dict__.copy()  # Copy the dict to avoid modifying the original
-        # Remove the attribute that should not be pickled
-        del state['device']
-        return state
-
-    def __setstate__(self, state):
-        # Restore instance attributes (temp_value will be missing)
-        self.__dict__.update(state)'''
 
 
     def filter_LUTs(self, **attributes):
@@ -126,7 +107,7 @@ class Config:
         origin = cut.origin
         cut_x, cut_y = nd.get_x_coord(origin), nd.get_y_coord(origin)
 
-        INT_tiles = filter(lambda tile: nd.get_tile_type(tile) == 'INT', wires_dict)
+        INT_tiles = filter(lambda tile: nd.get_tile_type(tile) == cfg.INT_label, wires_dict)
         valid_INT_tiles = filter(lambda tile: rl.check_tile_compliance(tiles_map, nodes, origin, tile) and
                                  rl.check_wire_compliance(tiles_map, wires_dict, edges, origin, tile), INT_tiles)
 

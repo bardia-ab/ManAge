@@ -356,7 +356,7 @@ def get_edge_type_regex_freq_dict(df, type='pip'):
             continue
         elif type == 'wire' and (nd.get_clb_node_type(edge[0]) == 'FF_out' or nd.get_clb_node_type(edge[1]) == 'FF_in'):
             continue
-        elif any(map(lambda x: nd.get_port(x).startswith('CLE'), edge)):
+        elif any(map(lambda x: nd.get_port(x).startswith(cfg.CLB_label), edge)):
             regex_edge = 'Route Thru'
         else:
             regex_edge = (an.get_regex(edge[0]), an.get_regex(edge[1]))

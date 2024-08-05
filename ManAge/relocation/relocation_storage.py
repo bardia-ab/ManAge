@@ -106,7 +106,7 @@ class RLOC_Collection:
         uncovered_pips_length = {}
         coordinates = self.device.get_coords()
         for coordinate in coordinates:
-            INT_tile = f'INT_{coordinate}'
+            INT_tile = f'{cfg.INT_label}_{coordinate}'
             N_pips = cfg.n_pips_two_CLB if all(map(lambda tile: tile is not None, self.device.tiles_map[coordinate].values())) else cfg.n_pips_one_CLB
             uncovered_pips_length[INT_tile] = N_pips
 
@@ -114,7 +114,7 @@ class RLOC_Collection:
 
     def get_coverage(self):
         total_pips = sum(self.get_pips_length_dict().values())
-        covered_pips = sum(len(v) for k, v in self.covered_pips.items() if k.startswith('INT') and nd.get_coordinate(k)
+        covered_pips = sum(len(v) for k, v in self.covered_pips.items() if k.startswith(cfg.INT_label) and nd.get_coordinate(k)
                            in self.device.get_coords())
 
         return f'Coverage: {covered_pips / total_pips:.2%}'
