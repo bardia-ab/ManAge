@@ -3,6 +3,8 @@ from pathlib import Path
 from tqdm import tqdm
 
 from xil_res.architecture import Arch
+from xil_res.minimal_config import MinConfig
+from relocation.configuration import Config
 from constraint.configuration import ConstConfig
 import constraint.CUTs_VHDL_template  as tmpl
 from constraint.net import Net
@@ -31,7 +33,14 @@ if __name__ == '__main__':
     config_path, file = str(Path(args.config_file).parent), Path(args.config_file).name
     TC_idx = Path(args.config_file).stem
     TC = util.load_data(config_path, file)
-    CUTs = sorted(TC.CUTs, key=lambda x: (x.index, x.get_x_coord(), x.get_y_coord()))
+    if type(TC) == MinConfig:
+        CUTs = TC.CUTs
+    elif type(TC) == Config:
+        CUTs = TC.D_CUTs
+    else:
+        raise ValueError(f'Invalid TC specified.')
+
+    CUTs.sort(key=lambda x: (x.index, x.get_x_coord(), x.get_y_coord()))
 
     # Limit CUTs
     if args.CUTs_count is not None:
