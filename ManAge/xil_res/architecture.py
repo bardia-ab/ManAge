@@ -91,10 +91,10 @@ class Arch:
             raise ValueError(f'{name}: Invalid CR!')
 
     def get_INTs(self):
-        return {tile for tile in self.wires_dict if tile.startswith('INT')}
+        return {tile for tile in self.wires_dict if tile.startswith(cfg.INT_label)}
 
     def get_CLBs(self):
-        return {tile for tile in self.wires_dict if tile.startswith('CLE')}
+        return {tile for tile in self.wires_dict if tile.startswith(cfg.CLB_label)}
 
     def get_FFs(self):
         FFs = set()
@@ -169,7 +169,7 @@ class Arch:
         G = nx.DiGraph()
         edges = set()
         desired_tiles = set(filter(lambda tile: xlim_down <= nd.get_x_coord(tile) <= xlim_up and ylim_down <= nd.get_y_coord(tile) <= ylim_up, self.wires_dict))
-        desired_INTs = set(filter(lambda tile: nd.get_tile_type(tile) == 'INT', desired_tiles))
+        desired_INTs = set(filter(lambda tile: nd.get_tile_type(tile) == cfg.INT_label, desired_tiles))
         desired_CLBs = desired_tiles - desired_INTs
 
         # wires
@@ -190,7 +190,7 @@ class Arch:
 
     def set_compressed_graph(self, tile: str, default_weight=1):
         if re.match('X\d+Y\d+', tile):
-            tile = f'INT_{tile}'
+            tile = f'{cfg.INT_label}_{tile}'
 
         if not (f'G_{self.name}_{tile}.data' in os.listdir(cfg.graph_path)):
             x, y = nd.get_x_coord(tile), nd.get_y_coord(tile)
@@ -317,7 +317,7 @@ class Arch:
         return covered_pips
 
     def get_pips(self, origin, local=False):
-        desired_tile = f'INT_{origin}'
+        desired_tile = f'{cfg.INT_label}_{origin}'
         self.set_pips_length_dict(desired_tile)
 
         if local:
@@ -334,7 +334,7 @@ class Arch:
     def reform_cost(self):
         for edge in self.G.edges():
             if nd.get_tile(edge[0]) == nd.get_tile(edge[1]):
-                if nd.get_tile_type(edge[0]) == 'CLB':
+                if nd.get_tile_type(edge[0]) =='CLB':
                     if any(map(lambda node: cfg.MUXED_CLB_out_pattern.match(node), edge)):
                         weight = 100
                     elif cfg.LUT_in6_pattern.match(edge[0]):

@@ -2,6 +2,7 @@ import re
 from xil_res.node import Node as nd
 from dataclasses import dataclass, field
 from typing import List, Set
+import utility.config as cfg
 
 @dataclass
 class DeviceModel:
@@ -32,7 +33,7 @@ class DeviceModel:
                 tile    = self.get_tile(fields)
                 self.tiles.add(tile)
 
-                if 'Name=RCLK' in line:
+                if f'Name={cfg.HCS_tile_label}' in line:
                     CR = self.get_CR(fields)
                     if CR != '' and CR not in self.CR_HCS_Y_dict:
                         self.CR_HCS_Y_dict[CR] = nd.get_y_coord(tile)
@@ -53,54 +54,6 @@ class DeviceModel:
             if not self.pips:
                     pips = self.extract_pips(line)
                     self.pips = self.format_pips(pips)
-
-        with open(viv_rpt_path) as lines:
-            line = next(filter(lambda x: x.startswith('Pips=INT_INTF_R_X'), lines))
-            if not self.pips_INTF_R:
-                    pips = self.extract_pips(line)
-                    self.pips_INTF_R = self.format_pips(pips)
-
-        with open(viv_rpt_path) as lines:
-            line = next(filter(lambda x: x.startswith('Pips=INT_INTF_L_X'), lines))
-            if not self.pips_INTF_L:
-                    pips = self.extract_pips(line)
-                    self.pips_INTF_L = self.format_pips(pips)
-
-        with open(viv_rpt_path) as lines:
-            line = next(filter(lambda x: x.startswith('Pips=INT_INTF_R_PCIE4_X'), lines))
-            if not self.pips_INT_INTF_R_PCIE4:
-                    pips = self.extract_pips(line)
-                    self.pips_INT_INTF_R_PCIE4 = self.format_pips(pips)
-
-        with open(viv_rpt_path) as lines:
-            line = next(filter(lambda x: x.startswith('Pips=INT_INTF_L_PCIE4_X'), lines))
-            if not self.pips_INT_INTF_L_PCIE4:
-                    pips = self.extract_pips(line)
-                    self.pips_INT_INTF_L_PCIE4 = self.format_pips(pips)
-
-        with open(viv_rpt_path) as lines:
-            line = next(filter(lambda x: x.startswith('Pips=INT_INTF_L_TERM_GT_X'), lines))
-            if not self.pips_INT_INTF_L_TERM_GT:
-                    pips = self.extract_pips(line)
-                    self.pips_INT_INTF_L_TERM_GT = self.format_pips(pips)
-
-        with open(viv_rpt_path) as lines:
-            line = next(filter(lambda x: x.startswith('Pips=INT_INTF_R_TERM_GT_X'), lines))
-            if not self.pips_INT_INTF_R_TERM_GT:
-                    pips = self.extract_pips(line)
-                    self.pips_INT_INTF_R_TERM_GT = self.format_pips(pips)
-
-        with open(viv_rpt_path) as lines:
-            line = next(filter(lambda x: x.startswith('Pips=INT_INTF_RIGHT_TERM_IO_X'), lines))
-            if not self.pips_INT_INTF_RIGHT_TERM_IO:
-                    pips = self.extract_pips(line)
-                    self.pips_INT_INTF_RIGHT_TERM_IO = self.format_pips(pips)
-
-        with open(viv_rpt_path) as lines:
-            line = next(filter(lambda x: x.startswith('Pips=INT_INTF_LEFT_TERM_PSS_X'), lines))
-            if not self.pips_INT_INTF_LEFT_TERM_PSS:
-                    pips = self.extract_pips(line)
-                    self.pips_INT_INTF_LEFT_TERM_PSS = self.format_pips(pips)
 
         self.set_pipjuncs()
         with open(viv_rpt_path) as lines:
@@ -143,17 +96,17 @@ class DeviceModel:
 
 
     def valid_wire(self, wire):
-        valid_tiles_pattern = '(INT|CLE[LM](_[LR])*)_X\d+Y\d+'
+        valid_tiles_pattern = f'{cfg.INT_pattern.pattern}|{cfg.CLB_pattern.pattern}'
         cond_valid_tile = all(map(lambda x: re.match(valid_tiles_pattern, nd.get_tile(x)), wire))
         cond_self_loop = wire[0] != wire[1]
         cond_middle_wire = True
         for node in wire:
-            if node.startswith('INT'):
+            if node.startswith(cfg.INT_label):
                 if nd.get_port(node) not in self.pipjuncs:
                     cond_middle_wire = False
                     break
 
-            elif not nd.get_port(node).startswith('CLE'):
+            elif not nd.get_port(node).startswith(cfg.CLB_label):
                 cond_middle_wire = False
                 break
 

@@ -1,4 +1,6 @@
 from xil_res.node import Node as nd
+import utility.config as cfg
+
 class CR:
     __slots__ = ('name', 'coords', 'HCS_Y_coord')
 
@@ -18,7 +20,7 @@ class CR:
 
     def get_tiles(self, device, tile_type=None):
         tiles = set()
-        if tile_type == 'INT':
+        if tile_type == cfg.INT_label:
             tiles = set(filter(lambda x: nd.get_coordinate(x) in self.coords, device.get_INTs()))
         elif tile_type == 'CLB':
             tiles = set(filter(lambda x: nd.get_coordinate(x) in self.coords, device.get_CLBs()))

@@ -1,10 +1,10 @@
 import re
 from itertools import product
 from pathlib import Path
-
 import networkx as nx
 
 from xil_res.node import Node as nd
+import utility.config as cfg
 
 def read_FASM(fasm_file):
     fasm_list = []
@@ -152,14 +152,14 @@ def get_dual_LUT_FASM(LUT_tile, label, value):
         'H': 'IMUX_{}47'
     }
     i6_port = i6_dct[label].format(nd.get_direction(LUT_tile))
-    INT_tile = f'INT_{nd.get_coordinate(LUT_tile)}'
+    INT_tile = f'{cfg.INT_label}_{nd.get_coordinate(LUT_tile)}'
     pip = (f'{INT_tile}/VCC_WIRE', f'{INT_tile}/{i6_port}')
 
     return get_pip_setting(pip, value=value)
 
 def get_FF_CTRL_pips(tile, T_B, E_W, FF_index, value):
     pips = set()
-    tile = f'INT_{nd.get_coordinate(tile)}'
+    tile = f'{cfg.INT_label}_{nd.get_coordinate(tile)}'
     FF_pins_dct = {
         'C': {'B': 'CTRL_{}4', 'T': 'CTRL_{}5'},
         'SR': {'B': 'CTRL_{}6', 'T': 'CTRL_{}7'},
@@ -198,41 +198,3 @@ def get_truth_table(n_entry):
     truth_table = list(product((0, 1), repeat=n_entry))
     return [entry[::-1] for entry in truth_table]
 
-
-if __name__ == '__main__':
-    from xil_res.architecture import Arch
-    from xil_res.node import Node as nd
-    from bidict import bidict
-    device = Arch('xczu9eg')
-    fasm_file = Path(r'C:\Users\t26607bb\Desktop\CPS_Project\RO_Python\bitstream\oscillator_floodv2_unit_X2Y1_9eg') / 'oscillator_floodv2_unit_X2Y1_9eg_1clb.fasm'
-    fasm_list = read_FASM(str(fasm_file))
-    pip_entries = extract_pip_entries(fasm_list)
-    pips = {convert_FASM_pip(pip_entry) for pip_entry in pip_entries}
-    G = nx.DiGraph()
-    G.add_edges_from(pips)
-
-    # wire dict
-    used_tiles = {nd.get_tile(node) for pip in pips for node in pip}
-    wires_dict_light = {k: v for k, v in device.wires_dict.items() if k in used_tiles}
-    wires_dict = bidict({k: v for key, value in wires_dict_light.items() for (k, v) in value})
-
-    # add wires to G
-    wires = set()
-    for k, v in wires_dict_light.items():
-        wires.update(v)
-
-    G.add_edges_from(wires)
-
-    # find ROs
-    clb_out_neighs = list(filter(lambda x: re.match('.*LOGIC_OUTS.*', x), G))
-    LUT_ins = list(filter(lambda x: re.match('.*/IMUX.*', x) and nd.is_i6(wires_dict[x]), G))
-    sources = product({'s'}, clb_out_neighs)
-    sinks = product(LUT_ins, {'t'})
-    G.add_edges_from(sources)
-    G.add_edges_from(sinks)
-    RO_paths = list(nx.all_simple_paths(G, 's', 't'))
-    shorts = list(filter(lambda x: G.in_degree(x) > 1,G))
-    print(shorts)
-
-
-    print('hi')

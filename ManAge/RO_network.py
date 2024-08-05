@@ -2,7 +2,7 @@ import argparse
 from tqdm import tqdm
 from joblib import Parallel, delayed
 from pathlib import Path
-from RO_Functions import design, cluster, gen_bitstream
+from RO.RO_Functions import design, cluster, gen_bitstream
 from xil_res.architecture import Arch
 import utility.config as cfg
 

@@ -34,7 +34,7 @@ class CUT:
         self.G.add_edges_from(path.get_edges())
 
     def get_covered_pips(self):
-        tile = f'INT_{self.origin}'
+        tile = f'{cfg.INT_label}_{self.origin}'
         return set(filter(lambda edge: nd.get_tile(edge[0]) == tile, self.main_path.get_pips()))
 
 

@@ -2,11 +2,13 @@ import os, re, sys, csv
 import pandas as pd
 import networkx as nx
 import numpy as np
+import matplotlib.pyplot as plt
 from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 os.chdir(str(Path(__file__).parent.parent))
 import utility.utility_functions as util
 from xil_res.node import Node as nd
+import utility.config as cfg
 
 def parse_tiles_map(tiles_map):
     # (CLB_W, INT, None) : {INT_X#Y#, }
@@ -84,9 +86,9 @@ def get_rloc_wires_dict(wires_dict):
     return rloc_wires_dict
 
 def remove_clb_wires(wires_dict):
-    wires_dict = {k: v for k, v in wires_dict.items() if nd.get_tile_type(k) == 'INT'}
+    wires_dict = {k: v for k, v in wires_dict.items() if nd.get_tile_type(k) == cfg.INT_label}
     for tile, wires in wires_dict.items():
-        wires_dict[tile] = set(filter(lambda wire: all(map(lambda node: nd.get_tile_type(node) == 'INT', wire)), wires))
+        wires_dict[tile] = set(filter(lambda wire: all(map(lambda node: nd.get_tile_type(node) == cfg.INT_label, wire)), wires))
 
     return wires_dict
 
