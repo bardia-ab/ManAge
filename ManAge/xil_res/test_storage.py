@@ -37,8 +37,8 @@ class TestCollection:
                                                                   for config_file in config_files)
             self.sort_prev_TCs(TC_num_CUTs)
             rloc_collection = util.load_data(str(self.prev_config_dir), 'rloc_collection.data')
-            if f'INT_{self.origin}' in rloc_collection.covered_pips:
-                covered_pips = {tuple(map(lambda node: f'INT_{self.origin}/{node}', pip)) for pip in rloc_collection.covered_pips[f'INT_{self.origin}']}
+            if f'{cfg.INT_label}_{self.origin}' in rloc_collection.covered_pips:
+                covered_pips = {tuple(map(lambda node: f'{cfg.INT_label}_{self.origin}/{node}', pip)) for pip in rloc_collection.covered_pips[f'INT_{self.origin}']}
             else:
                 covered_pips = set()
 
@@ -129,7 +129,7 @@ class TestCollection:
 
         # reset Clock Groups
         for CG in self.clock_groups:
-            CG.reset(self)
+            CG.clear()
 
         # assign virtual source and sink nodes
         for CD in self.clock_domains:

@@ -113,7 +113,7 @@ class MinConfig:
             self.restore_source_sink(path)
             # 1- reset CD
             self.reset_CDs(test_collection, path)
-            self.test_CD()
+
             # 3- remove  sublut from LUT
             self.empty_LUTs(path.subLUTs)
             self.empty_FFs(path.FFs)
@@ -124,6 +124,7 @@ class MinConfig:
             # 2- unblock path
             self.unblock_path(path, test_collection.device)
 
+        self.test_CD()
 
         self.CUTs.remove(cut)
 
@@ -553,9 +554,9 @@ class MinConfig:
 
     def reset_CDs(self, test_collection, path):
         #restored_CGs = [CG for CG in self.CD if path.prev_CD[CG].name == 'None' and path.prev_CD[CG] != self.CD[CG]]
-        restored_CGs = [CG for CG in self.CD if path.get_prev_CD(CG).CD == ClockDomain() and path.get_prev_CD(CG).CD != CG.CD]
-        for CG in restored_CGs:
-            CG.reset(test_collection, path)
+        restore_CGs = ClockGroup.get_changed_CGs(self.CD, path.prev_CD)
+        for CG in restore_CGs:
+            CG.restore(test_collection)
 
     def get_clock_domain(self, node: str) -> ClockDomain:
         clock_group = nd.get_clock_group(node)

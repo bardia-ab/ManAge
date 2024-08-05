@@ -1,16 +1,18 @@
-import re, sys
+import re
 import networkx as nx
+from typing import Set, Tuple
 from itertools import product
-sys.path.insert(0, r'..\xil_res')
 from xil_res.node import Node as nd
-sys.path.insert(0, r'../utility')
 import utility.config as cfg
-
-
 class ClockDomain:
 
+    __slots__ = ('name', 'pattern', 'src_sink_node', 'type')
     def __init__(self):
-        self.name = 'None'
+        self.name           = 'None'
+        self.pattern        = None
+        self.src_sink_node  = None
+        self.type           = None
+
 
     def __repr__(self):
         return f'CD(name={self.name})'
@@ -21,21 +23,38 @@ class ClockDomain:
     def __hash__(self):
         return hash(self.name)
 
-    @classmethod
-    def clear(cls):
-        cls.pattern_dict = {}
-
     def set(self, name: str, pattern: re.Pattern, src_sink_node: str, type: str):
-        self.name           = name
-        self.pattern        = pattern           # FF_in | FF_out
-        self.src_sink_node  = src_sink_node     # s | t
-        self.type           = type              # source | sink
+        """Define a clock domain
 
-    def is_unset(self):
+        :param name: The name for clock domain e.g. launch or sample
+        :type name: str
+        :param pattern: The regex pattern of the FF node (input or output) depending on the type of the clock domain 
+        :type pattern: re.Pattern
+        :param src_sink_node: Virtual source or sink nodes connected to the FFs of this clock domain and are specified in the config.yaml file
+        :type src_sink_node: str
+        :param type: Type of the clock domain (source|sink)
+        :type type: str
+        """
+        self.name           = name
+        self.pattern        = pattern
+        self.src_sink_node  = src_sink_node
+        self.type           = type
+
+    def is_unset(self) -> bool:
+        """Determine weather the defined clock domain has been set or not
+
+        :return: True or False
+        :rtype: bool
+        """
         result = True if self.name == 'None' else False
         return result
 
     def assign_source_sink_nodes(self, G: nx.DiGraph()):
+        """Connect virtual source or sink nodes to the FFs of the clock domain depending on the type
+
+        :param G: The architecture graph
+        :type G: nx.DiGraph
+        """
         pred_neigh_nodes = set(filter(self.pattern.match, G))
         edges = set()
         if self.type == 'source':
@@ -45,10 +64,28 @@ class ClockDomain:
 
         G.add_edges_from(edges, weight=0)
 
+    def get_virtual_edges(self, *FF_nodes) -> Set[Tuple[str, str]] | Set:
+        """Returns a set of edges between the specified clock domain's source/sink node and specified FF nodes
 
+        :return: A set of virtual edges
+        :rtype: Set[Tuple[str, str]] | Set
+        """
+        virtual_edges = set()
+
+        if self.is_unset():
+            return virtual_edges
+
+        if self.type == 'source':
+            virtual_edges.update(product({self.src_sink_node}, FF_nodes))
+
+        if self.type == 'sink':
+            virtual_edges.update(product(FF_nodes, {self.src_sink_node}))
+
+        return virtual_edges
 
 class ClockGroup:
 
+    __slots__ = ('name', 'FFs', 'conflict', '_CD')
     def __init__(self, name):
         self.name       = name
         self.FFs        = set()
@@ -66,14 +103,69 @@ class ClockGroup:
 
     @property
     def is_free(self):
+        """Checks if a clock domain has been assigned
+
+        :return: True|False
+        :rtype: bool
+        """
         return self.CD == ClockDomain()
 
-    def reset(self, test_collection, path=None):
-        self.remove_FF(test_collection, path)
-        #self.conflict   = set()
+    def get_CD_type(self) -> str:
+        """This function returns the type of the clock domain assigned to the clock group
+
+        :raises ValueError: If no clock domain has been asigned to the clock domain
+        :return: Type of the assigned clock domain (source|sink)
+        :rtype: str
+        """
+        if self.CD.is_unset():
+            raise ValueError(f'Clock domain of {self} is unset.')
+        
+        return self.CD.type
+
+    def get_conflicting_FF_nodes(self, test_collection) -> Set[str]:
+        """This function returns all FF nodes within the conflicting clock groups
+
+        :return: FF nodes of the conflicting clock groups
+        :rtype: Set[str]
+        """
+        return {node for conf_CG in self.conflict for node in test_collection.get_clock_group(conf_CG).FFs}
+
+    def clear(self):
+        """This function clears FFs and disassociate the clock domain
+        """
+        self.FFs = set()
+        self._CD = ClockDomain()
+
+    def restore(self, test_collection):
+        # restore the virtual_src_sink of the clock groups' clock domain to conflicting clock groups' FF nodes
+        self.restore_virtual_node_to_conf_FFs(test_collection)
+
+        # restore the virtual_src_sink of other_CDs to the FF nodes of the clock_group
+        self.restore_other_CDs_virtual_node_to_FFs(test_collection)
+
+        # empty FFs
+        self.FFs = set()
+        for conf_CG in self.conflict:
+            conf_CG = test_collection.get_clock_group(conf_CG)
+            conf_CG.FFs = set()
+
+        # disassociate the clock domain
         self._CD         = ClockDomain()
 
+
+
     def set(self, ff_node: str, test_collection):
+        """This function does four things:
+        1- It adds appropriate FF nodes within the clock group depending on the type of the clock domain
+        2- It assigns the clock domain associated with the specified ff_node
+        3- It removes invalid edges between virtual source/sink nodes of other clock domains and FF nodes
+        4- It removes invalid edges between virtual source/sink nodes of the assigned clock domain and FF nodes of the conflicting clock group
+
+        :param ff_node: FF node
+        :type ff_node: str
+        :param test_collection: Test collection
+        :type test_collection: TestCollection
+        """
         TC = test_collection.TC
         clock_domain = test_collection.get_clock_domain(ff_node)
 
@@ -81,77 +173,98 @@ class ClockGroup:
         group_mates = nd.get_global_group_mates(TC.G, ff_node, self.name)
 
         # add FFs
-        self.FFs.update({nd.get_bel(node) for node in group_mates})
+        self.FFs.update(group_mates)
+        self.update_conf_FFs(test_collection)
 
         # set clock domain
         self.CD = clock_domain
 
-        # remove the virtual_src_sink of the ff_node clock_group from conflicted_clock_groups_nodes
-        self.remove_invalid_virtual_src_sink(TC.G)
+        # remove the virtual_src_sink of the clock groups' clock domain from conflicting clock groups' FF nodes
+        self.remove_virtual_node_from_conf_FFs(test_collection)
 
-        # remove the virtual_src_sink of other_CDs from the nodes of the clock_group
-        self.remove_other_CDs_virtual_src_sink(test_collection)
+        # remove the virtual_src_sink of other_CDs from the FF nodes of the clock_group
+        self.remove_other_CDs_virtual_node_from_FFs(test_collection)
 
-    def remove_FF(self, test_collection, path):
-        TC = test_collection.TC
+    def remove_virtual_node_from_conf_FFs(self, test_collection):
+        """This function removes the edges between the source/sink node of the clock domain assigned to this clock group and FF nodes within the conflicting clock groups
 
-        if path is None:
-            # restore the virtual_src_sink of the clock_group from conflicted_clock_groups_nodes
-            self.restore_invalid_virtual_src_sink(TC.G)
+        :param test_collection: Test collection
+        :type test_collection: TestCollection
+        """
+        conflicting_FF_nodes = self.get_conflicting_FF_nodes(test_collection)
+        switched_conflicting_FF_nodes = self.switch_FF_nodes(*conflicting_FF_nodes)
+        edges = self.CD.get_virtual_edges(*switched_conflicting_FF_nodes)
+        test_collection.TC.G.remove_edges_from(edges)
 
-        # restore the virtual_src_sink of other_CDs from the nodes of the clock_group
-        self.restore_other_CDs_virtual_src_sink(test_collection)
+        # block nodes
+        test_collection.TC.blocked_nodes.update(switched_conflicting_FF_nodes)
 
-        # empty FFs
-        self.FFs = set()
+    def restore_virtual_node_to_conf_FFs(self, test_collection):
+        """This function restores the edges between the source/sink node of the clock domain assigned to this clock group and FF nodes within the conflicting clock groups
 
+        :param TC: Minimal test configuration
+        :type TC: MinConfig
+        """
+        conflicting_FF_nodes = self.get_conflicting_FF_nodes(test_collection)
+        switched_conflicting_FF_nodes = self.switch_FF_nodes(*conflicting_FF_nodes)
+        edges = self.CD.get_virtual_edges(*switched_conflicting_FF_nodes)
 
-    def remove_invalid_virtual_src_sink(self, G: nx.DiGraph):
+        # unblock nodes
+        test_collection.TC.blocked_nodes -= switched_conflicting_FF_nodes
+
+        test_collection.TC.add_edges(*edges, weight=0)
+        #test_collection.TC.G.add_edges_from(edges, weight=0)
+
+    def remove_other_CDs_virtual_node_from_FFs(self, test_collection):
+        """This function removes the edges between source/sink nodes of other clock domains and FF nodes within the clock group
+
+        :param test_collection: Test collection
+        :type test_collection: TestCollection
+        """
+        G = test_collection.TC.G
+        other_CDs = {CD for CD in test_collection.clock_domains if CD != self.CD}
         edges = set()
-        if self.CD.type == 'source':
-            invalid_virtual_src_neighs = {neigh for neigh in G.neighbors(self.CD.src_sink_node) if
-                                          nd.get_clock_group(neigh) in self.conflict}
-            edges.update(set(product({self.CD.src_sink_node}, invalid_virtual_src_neighs)))
-        if self.CD.type == 'sink':
-            invalid_virtual_sink_preds = {pred for pred in G.predecessors(self.CD.src_sink_node) if
-                                          nd.get_clock_group(pred) in self.conflict}
-            edges.update(set(product(invalid_virtual_sink_preds, {self.CD.src_sink_node})))
+        for other_CD in other_CDs:
+            switched_FF_nodes = self.switch_FF_nodes(*self.FFs)
+            edges.update(other_CD.get_virtual_edges(*switched_FF_nodes))
 
         G.remove_edges_from(edges)
 
-    def restore_invalid_virtual_src_sink(self, G: nx.DiGraph):
-        edges = set()
-        if self.CD.name == 'None':
-            return
+        # block nodes
+        test_collection.TC.blocked_nodes.update(switched_FF_nodes)
 
-        desired_pattern_nodes = filter(self.CD.pattern.match, G)
-        desired_conflict_CG_nodes = {node for node in desired_pattern_nodes if (nd.get_clock_group(node) in self.conflict)}
-        if self.CD.type == 'source':
-            edges.update(set(product({self.CD.src_sink_node}, desired_conflict_CG_nodes)))
-        if self.CD.type == 'sink':
-            edges.update(set(product(desired_conflict_CG_nodes, {self.CD.src_sink_node})))
+    def restore_other_CDs_virtual_node_to_FFs(self, test_collection):
+        """This function rstores the edges between source/sink nodes of other clock domains and FF nodes within the clock group
 
-        G.add_edges_from(edges)
-
-    def remove_other_CDs_virtual_src_sink(self, test_collection):
+        :param test_collection: Test collection
+        :type test_collection: TestCollection
+        """
         TC = test_collection.TC
         other_CDs = {CD for CD in test_collection.clock_domains if CD != self.CD}
         edges = set()
         for other_CD in other_CDs:
-            edges.update({edge for edge in TC.G.in_edges(other_CD.src_sink_node) if nd.get_clock_group(edge[0]) == self.name})
-            edges.update({edge for edge in TC.G.out_edges(other_CD.src_sink_node) if nd.get_clock_group(edge[1]) == self.name})
+            switched_FF_nodes = self.switch_FF_nodes(*self.FFs)
+            edges.update(other_CD.get_virtual_edges(*switched_FF_nodes))
 
-        TC.G.remove_edges_from(edges)
+        # unblock nodes
+        test_collection.TC.blocked_nodes -= switched_FF_nodes
 
-    def restore_other_CDs_virtual_src_sink(self, test_collection):
-        TC = test_collection.TC
-        other_CDs = {CD for CD in test_collection.clock_domains if CD != self.CD}
-        edges = set()
-        for other_CD in other_CDs:
-            edges.update({edge for edge in TC.G.in_edges(other_CD.src_sink_node) if nd.get_clock_group(edge[0]) == self.name})
-            edges.update({edge for edge in TC.G.out_edges(other_CD.src_sink_node) if nd.get_clock_group(edge[1]) == self.name})
+        TC.add_edges(*edges, weight=0)
+        #TC.G.add_edges_from(edges, weight=0)
 
-        TC.G.add_edges_from(edges)
+    def update_conf_FFs(self, test_collection):
+        """This function updates the FF nodes of the conflicting clock groups
+
+        :param test_collection: Test collection
+        :type test_collection: TestCollection
+        """
+        G = test_collection.TC.G
+        clb_node_type = nd.get_clb_node_type(list(self.FFs)[0])
+        for conf_CG in self.conflict:
+            conf_CG = test_collection.get_clock_group(conf_CG)
+            conf_clb_node_type = 'FF_out' if clb_node_type == 'FF_in' else 'FF_in'
+            conf_CG.FFs.update(node for node in G if nd.get_clock_group(node) == conf_CG.name and
+             nd.get_clb_node_type(node) == conf_clb_node_type)
 
     @property
     def CD(self):
@@ -159,6 +272,12 @@ class ClockGroup:
 
     @CD.setter
     def CD(self, clock_domain: ClockDomain):
+        """Assigns a clock domain to the clok group
+
+        :param clock_domain: Clock domain that must be assigned
+        :type clock_domain: ClockDomain
+        :raises ValueError: when the clock group is already assigned a clock domain
+        """
         if self.CD.is_unset():
             self._CD.set(clock_domain.name, clock_domain.pattern, clock_domain.src_sink_node, clock_domain.type)
         else:
@@ -166,11 +285,40 @@ class ClockGroup:
                 raise ValueError(f'CD: {clock_domain} cannot set to {self}')
 
     @staticmethod
-    def CD_changed(current_CD, prev_CD):
-        result = False
-        for curr_CG, prev_CG in zip(current_CD, prev_CD):
-            if curr_CG.CD != prev_CG.CD:
-                result = True
-                break
+    def get_changed_CGs(current_CD, prev_CD):
+        """Returns- the list of clock groups that are recently set
 
-        return result
+        :param current_CD: List of current clock groups
+        :type current_CD: List[ClockGroup]
+        :param prev_CD: List of clock groups before the current path search
+        :type prev_CD: List[ClockGroup]
+        :return: List of set clock groups
+        :rtype: List[ClockGroup]
+        """
+        changed_CGs = []
+        for curr_CG in current_CD:
+            prev_CG = next(CG for CG in prev_CD if CG == curr_CG)
+            if curr_CG.CD != prev_CG.CD and prev_CG.CD == ClockDomain():
+                changed_CGs.append(curr_CG)
+
+        return changed_CGs
+
+    @staticmethod
+    def switch_FF_nodes(*FF_nodes):
+        """Converts the input FF nodes to the equivalent output ones and vice versa
+
+        :return: Set of switched FF nodes
+        :rtype: Set
+        """
+        switched_nodes = set()
+        for node in FF_nodes:
+            tile = nd.get_tile(node)
+            label = nd.get_label(node)
+            index = nd.get_bel_index(node)
+            if nd.get_clb_node_type(node) == 'FF_out':
+                switched_nodes.add(nd.get_FF_input(tile, label, index))
+
+            if nd.get_clb_node_type(node) == 'FF_in':
+                switched_nodes.add(nd.get_FF_output(tile, label, index))
+
+        return switched_nodes
