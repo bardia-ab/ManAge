@@ -60,12 +60,15 @@ def fill_rect_TC(device, TC, rectangle, D_CUTs, split_TC_path):
 def relocate(fasm_list, new_tile):
     new_fasm_list = set()
     for entry in fasm_list:
-        if entry.startswith('CLE'):
-            new_fasm_list.add(re.sub('CLE[LM](_[LR])*_X\d+Y\d+', new_tile, entry))
+        if entry.startswith(cfg.CLB_label):
+            new_fasm_list.add(re.sub(f'{cfg.CLB_pattern.pattern[:-1]}', new_tile, entry))
 
-        if entry.startswith('INT'):
-            INT_tile = f'INT_{nd.get_coordinate(new_tile)}' if nd.get_tile_type(new_tile) == 'CLB' else new_tile
-            new_fasm_list.add(re.sub('INT(_INTF_[LR](_PCIE4|_TERM_GT)*)*_X\d+Y\d+|INT_INTF_(LEFT|RIGHT)_TERM_(IO|PSS)', INT_tile, entry))
+        if entry.startswith(cfg.BRAM_label):
+            new_fasm_list.add(re.sub(f'{cfg.BRAM_pattern}', new_tile, entry))
+
+        if entry.startswith(cfg.INT_label):
+            INT_tile = f'{cfg.INT_label}_{nd.get_coordinate(new_tile)}' if nd.get_tile_type(new_tile) == 'CLB' else new_tile
+            new_fasm_list.add(re.sub(f'{cfg.INT_label}(_INTF_[LR](_PCIE4|_TERM_GT)*)*_X\d+Y\d+|INT_INTF_(LEFT|RIGHT)_TERM_(IO|PSS)', INT_tile, entry))
 
     return new_fasm_list
 
@@ -97,7 +100,7 @@ def remove_pips(removed_pips_file):
     return get_pips_FASM(*removed_pips, mode='clear')
 
 def get_netlist(G):
-    all_paths = get_ROs3(G)
+    all_paths = get_ROs(G)
     antennas = get_antennas(G, all_paths)
 
     edges = set()
@@ -127,16 +130,13 @@ def store_fasm(TC, removed_pips_file, store_path, fasm_name):
     for cut in TC.CUTs:
         pips.update(edge for edge in cut.G.edges if Edge(edge).get_type() == 'pip')
 
-    LUTs = filter(lambda x: x.capacity < 2, TC.LUTs.values())
+    LUTs = set(filter(lambda x: x.capacity < 2, TC.LUTs.values()))
     for LUT in LUTs:
-        #LUT = TC.LUTs[LUT]
-        # get init value
         tile = LUT.tile
         label = LUT.label
         init = LUT.get_init()
         if LUT.capacity == 1:
             init = 2 * init[8:]
-            fasm_list.add(get_dual_LUT_FASM(tile, label, 1))
             OUTMUX_idx = 5
         else:
             OUTMUX_idx = 6
@@ -148,6 +148,19 @@ def store_fasm(TC, removed_pips_file, store_path, fasm_name):
 
         fasm_list.update(get_FF_CTRL_pips(tile, nd.get_top_bottom(LUT.name), nd.get_direction(LUT.name), 1, 1))
         fasm_list.update(get_FF_CTRL_pips(tile, nd.get_top_bottom(LUT.name), nd.get_direction(LUT.name), 2, 1))
+
+    LUT_tiles = {LUT.tile for LUT in LUTs}
+    for tile in LUT_tiles:
+        clock_groups = list(product({'T', 'B'}, {'W', 'E'}))
+        for clock_group in clock_groups:
+            fasm_list.update(get_FF_CTRL_pips(tile, clock_group[0], clock_group[1], 1, 1))
+            fasm_list.update(get_FF_CTRL_pips(tile, clock_group[0], clock_group[1], 2, 1))
+
+        for idx in range(65, 73):
+            label = chr(idx)
+            # FF settings
+            fasm_list.add(f'{tile}.{label}FF.INIT.V0')
+            fasm_list.add(f'{tile}.{label}FF.SRVAL.V0')
 
     fasm_list.update(get_pips_FASM(*pips, mode='set'))
 
@@ -248,6 +261,14 @@ def cluster(args, device):
 
             else:
                 fasm_list.update(relocate(fasm_dict[tile_map_type], clb))
+
+        '''bottom_left, top_right = nd.get_borders_coords(*clbs)
+        BRAM_tiles = set(filter(lambda x: x.startswith('BRAM_X') and nd.is_tile_in_rectangle(bottom_left, top_right, x),
+                                device.tiles))
+
+        for tile in BRAM_tiles:
+            fasm_list.update(relocate(fasm_dict['BRAM_pattern'], tile))'''
+
 
         with open(output_file, 'w+') as fasm_file:
             fasm_file.write('\n'.join(sorted(fasm_list)))
