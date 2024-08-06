@@ -208,6 +208,7 @@ def log_error(bit_file_name, store_path, type):
     with open(error_file, 'a+') as file:
         file.write(f'{bit_file_name} => {type} Failed!\n')
 
+################### populate_cut_delay #######################
 def get_invalid_TCs(result_path):
     TCs = set()
     files = ['Errors.txt', 'validation.txt']
@@ -312,6 +313,7 @@ def fill_cuts_list(TC_result_path, TC_CUT_path, TC, pbar, skew_path=None):
     cuts_list.CUTs = [cut_delay for cut_delay in cuts_list.CUTs if cut_delay.rising_delay != 0 and cut_delay.falling_delay != 0]
     return cuts_list.CUTs
 
+############################################################
 def conv_cuts_list2df(cuts_list):
     results = Parallel(n_jobs=cfg.n_jobs, require='sharedmem')(delayed(vars)(cut) for cut in cuts_list.CUTs)
     df = pd.DataFrame(results)

@@ -18,7 +18,7 @@ parent_parser.add_argument('output_file', help='Path to the output file')
 
 parent_parser.add_argument('-x', '--x_label', default='FPGA Columns', help='Label of the X axis')
 parent_parser.add_argument('-y', '--y_label', default='FPGA Rows', help='Label of the Y axis')
-parent_parser.add_argument('-s', '--figsize', type=int, nargs=2, default='(8, 6)', help='Size of the Figure (Width, Height)')
+parent_parser.add_argument('-s', '--figsize', type=int, nargs=2, default=(8, 6), help='Size of the Figure (Width, Height)')
 
 # Subcommand: tile_map
 parser_tile_map = subparser.add_parser('tile_map', parents=[parent_parser], help="Draw the heatmap of the compositions of the devices's coordinates")
