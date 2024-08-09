@@ -12,7 +12,7 @@ from xil_res.architecture import Arch
 from xil_res.path import PathIn, PathOut, MainPath, NotPath
 from xil_res.cut import CUT
 from xil_res.edge import PIP
-from joblib import Parallel, delayed
+#from joblib import Parallel, delayed
 
 class MinConfig:
 
@@ -97,7 +97,7 @@ class MinConfig:
         # 8- block source & sink
         #self.block_LUTs()
         self.block_source_sink(path)
-        self.test_CD()
+        #self.test_CD()
 
     def remove_CUT(self, test_collection):
         cut = self.CUTs[-1]
@@ -124,7 +124,7 @@ class MinConfig:
             # 2- unblock path
             self.unblock_path(path, test_collection.device)
 
-        self.test_CD()
+        #self.test_CD()
 
         self.CUTs.remove(cut)
 
@@ -337,11 +337,15 @@ class MinConfig:
         for subLUT in subLUTs:
             global_subLUTs = self.get_global_subLUTs(subLUT)
             global_subLUTs = {sublut for sublut in global_subLUTs if sublut.name != subLUT.name}
-            Parallel(n_jobs=-1, require='sharedmem')(delayed(global_subLUT.global_reset)(self) for global_subLUT in global_subLUTs)
+            #Parallel(n_jobs=-1, require='sharedmem')(delayed(global_subLUT.global_reset)(self) for global_subLUT in global_subLUTs)
+            for global_subLUT in global_subLUTs:
+                global_subLUT.global_reset(self)
 
     def block_global_subLUTs(self, subLUTs):
         global_subLUTs = self.get_global_subLUTs(*subLUTs)
-        Parallel(n_jobs=-1, require='sharedmem')(delayed(global_subLUT.block_usage)() for global_subLUT in global_subLUTs)
+        #Parallel(n_jobs=-1, require='sharedmem')(delayed(global_subLUT.block_usage)() for global_subLUT in global_subLUTs)
+        for global_subLUT in global_subLUTs:
+            global_subLUT.block_usage()
 
     def set_global_FFs(self, test_collection, FFs):
         tiles_map = test_collection.device.tiles_map
@@ -356,11 +360,15 @@ class MinConfig:
         for ff in FFs:
             global_FFs = self.get_global_FFs(ff)
             global_FFs = {global_FF for global_FF in global_FFs if global_FF.name != ff.name}
-            Parallel(n_jobs=-1, require='sharedmem')(delayed(global_FF.free_usage)() for global_FF in global_FFs)
+            #Parallel(n_jobs=-1, require='sharedmem')(delayed(global_FF.free_usage)() for global_FF in global_FFs)
+            for global_FF in global_FFs:
+                global_FF.free_usage()
 
     def block_global_FFs(self, FFs):
         global_FFs = self.get_global_FFs(*FFs)
-        Parallel(n_jobs=-1, require='sharedmem')(delayed(global_FF.block_usage)() for global_FF in global_FFs)
+        #Parallel(n_jobs=-1, require='sharedmem')(delayed(global_FF.block_usage)() for global_FF in global_FFs)
+        for global_FF in global_FFs:
+            global_FF.block_usage()
 
     def block_LUTs(self):
         occupied_LUTs = self.filter_LUTs(has_filled=True)
@@ -577,9 +585,11 @@ class MinConfig:
         TC_sink_groups = {CG.name for CG in self.CD if CG.CD != ClockDomain() and CG.CD.type == 'sink'}
         TC_unset_groups = {CG.name for CG in self.CD if CG.CD == ClockDomain()}
         if source_clock_groups - TC_unset_groups - TC_source_groups:
+            breakpoint()
             raise ValueError(f'invalid source clock group: {source_clock_groups - TC_unset_groups - TC_source_groups}')
 
         if sink_clock_groups - TC_unset_groups - TC_sink_groups:
+            breakpoint()
             raise ValueError(f'invalid sink clock group: {sink_clock_groups - TC_unset_groups - TC_sink_groups}')
 
 
