@@ -73,14 +73,14 @@ Parallel:
   n_jobs            : 3
 
 CM:
-  fin       : 100e6
+  fin       : 100000000
   D1        : 1
   M1        : 15
   O1        : 15
-  fpsclk1   : 100e6
+  fpsclk1   : 100000000
   mode_CM1  : 'incremental'
   D2        : 1
   M2        : 16
   O2        : 16
-  fpsclk2   : 100e6
+  fpsclk2   : 100000000
   mode_CM2  : 'decremental'
