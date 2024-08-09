@@ -21,7 +21,7 @@ parent_parser.add_argument('N_Parallel', type=int, default=cfg.N_Parallel, help=
 parser_run = subparser.add_parser('run', parents=[parent_parser], help='Run the experiment by loading the bitstreams onto the FPGA')
 parser_run.add_argument('bitstream_file', help="Specify the path to the bitstream file")
 parser_run.add_argument('serial_port', help="Specify the serial port for UART transmission")
-parser_run.add_argument('args.baud_rate', help="Specify the baud rate of the UART transmission")
+parser_run.add_argument('baud_rate', type=int, help="Specify the baud rate of the UART transmission")
 
 parser_run.add_argument('-t', '--timeout', type=float, default=220, help="Set a read timeout value in seconds")
 
@@ -75,7 +75,7 @@ if __name__ == '__main__':
 
         # create a folder for the bitstream in the results directory
         bitstream_result_path = Path(args.results_dir) / bit_file_name
-        util.create_folder(bitstream_result_path)
+        bitstream_result_path.mkdir(parents=True, exist_ok=True)
 
         # processing parameters
         T = 1 / MMCM2.fout
