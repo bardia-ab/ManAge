@@ -1,5 +1,5 @@
 # bitstream file
-set bit_file "[lindex $argv 0].bit"
+set bit_file [lindex $argv 0]
 
 # open hardware manager
 open_hw_manager
