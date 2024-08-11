@@ -3,6 +3,7 @@ from tqdm import tqdm
 from joblib import Parallel, delayed
 from pathlib import Path
 from RO.RO_Functions import design, cluster, gen_bitstream
+from RO.data_process import analysis, plot_temp_current
 from xil_res.architecture import Arch
 import utility.config as cfg
 
@@ -30,27 +31,44 @@ parser_cluster.add_argument('output_fasm_dir', help='Path to the output FASM fil
 parser_cluster.add_argument('-f', '--filter', help='Specify the CLB tile whose encompassing window is desired')
 
 # Subcommand: bitstream
-parser_bitstream = subparser.add_parser('bitstream', parents=[parent_parser], help='Generate bitstreams for FASM files')
+parser_bitstream = subparser.add_parser('bitstream', help='Generate bitstreams for FASM files')
 parser_bitstream.add_argument('input_fasm_dir', help='Path to the input FASM files directory')
 parser_bitstream.add_argument('blank_bitstream_file', help='Path to the blank bitstream file')
 parser_bitstream.add_argument('output_bitstream_dir', help='Path to the output bitstream files directory')
 
+# Subcommand: analysis
+parser_analysis = subparser.add_parser('analysis', help='Analyze the temperature and power characteristics of the RO design')
+parser_analysis.add_argument('input_fasm_file', help='Path to the input FASM file of the RO network design')
+parser_analysis.add_argument('temp_csv', help='Path to the measured temperature csv file')
+parser_analysis.add_argument('curr_csv', help='Path to the measured current csv file')
+parser_analysis.add_argument('output_df_file',
+                              help='''Path to the location where the DataFrame file must be stored.\n 
+                              If the file exists, the results of the specified RO design will be appended to the DataFrame''')
+
+# Subcommand: plot
+parser_plot = subparser.add_parser('plot', help='Plot the the temperature and current draw characteristics of the RO design')
+parser_plot.add_argument('temp_csv', help='Path to the measured temperature csv file')
+parser_plot.add_argument('curr_csv', help='Path to the measured current csv file')
+parser_plot.add_argument('output_file', help='Specify the full path where the output plot file should be stored')
 
 if __name__ == '__main__':
 
     # Parse arguments
     args = parser.parse_args()
 
-    # Device
-    device = Arch(args.device_name, non_clb_tiles=True)
-
     if args.subcommand == 'design':
+        # Device
+        device = Arch(args.device_name, non_clb_tiles=True)
+
         # create folder
         Path(args.output_fasm_dir).mkdir(parents=True, exist_ok=True)
 
         design(args, device)
 
     elif args.subcommand == 'cluster':
+        # Device
+        device = Arch(args.device_name, non_clb_tiles=True)
+
         # create folder
         Path(args.output_fasm_dir).mkdir(parents=True, exist_ok=True)
 
@@ -66,7 +84,12 @@ if __name__ == '__main__':
 
         Parallel(n_jobs=cfg.n_jobs, require='sharedmem')(delayed(gen_bitstream)(cfg.pyteman_path, fasm_file, args.blank_bitstream_file, args.output_bitstream_dir, pbar) for fasm_file in fasm_files)
 
-        
+    elif args.subcommand == 'plot':
+        plot_temp_current(args.temp_csv, args.curr_csv, cfg.temp_label, cfg.curr_label, cfg.time_label, args.output_file)
+
+    elif args.subcommand == 'analysis':
+        analysis(args.temp_csv, args.curr_csv, args.input_fasm_file, args.output_df_file)
+
     else:
         parser.print_help()
 
