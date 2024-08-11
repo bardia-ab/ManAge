@@ -9,7 +9,7 @@ os.chdir(str(Path(__file__).parent.parent))
 
 from xil_res.node import Node as nd
 from xil_res.edge import Edge
-from xil_res.path import Path
+from xil_res.path import Path as pt
 from xil_res.cut import CUT
 from xil_res.minimal_config import MinConfig
 from relocation.configuration import Config
@@ -26,10 +26,11 @@ def get_ROs(G: nx.DiGraph):
 
     for src in sources:
         for label in ['C', 'A', 'B', 'D', 'E', 'F', 'G', 'H']:
-            sinks = (nd.get_LUT_input(nd.get_tile(src), label, index) for index in range(1, 7))
+            idx_range = range(1,7) if (label == 'C' or len(sources) == 1) else range(1,2)
+            sinks = (nd.get_LUT_input(nd.get_tile(src), label, index) for index in idx_range)
             G_copy.add_edges_from(product(sinks, {'t'}))
             try:
-                path = Path.path_finder(G_copy, src, 't', weight='weight', blocked_nodes=set(), dummy_nodes=['t'])
+                path = pt.path_finder(G_copy, src, 't', weight='weight', blocked_nodes=set(), dummy_nodes=['t'])
                 blocked_edges = {edge for node in path[2:] for edge in G_copy.in_edges(node)} - set(zip(path, path[1:]))
                 G_copy.remove_edges_from(blocked_edges)
                 ROs.append(path)
@@ -39,6 +40,7 @@ def get_ROs(G: nx.DiGraph):
             G_copy.remove_node('t')
 
     return ROs
+
 def get_antennas(G:nx.DiGraph, all_paths):
     antennas = []
     G_copy = copy.deepcopy(G)
