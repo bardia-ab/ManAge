@@ -111,3 +111,8 @@ M2 = config['CM']['M2']
 O2 = config['CM']['O2']
 fpsclk2 = config['CM']['fpsclk2']
 mode_CM2 = config['CM']['mode_CM2']
+
+##### RO
+temp_label = config['RO']['temp_label']
+curr_label = config['RO']['curr_label']
+time_label = config['RO']['time_label']

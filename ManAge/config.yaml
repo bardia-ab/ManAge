@@ -78,9 +78,14 @@ CM:
   M1        : 15
   O1        : 15
   fpsclk1   : 100000000
-  mode_CM1  : 'incremental'
+  mode_CM1  : incremental
   D2        : 1
   M2        : 16
   O2        : 16
   fpsclk2   : 100000000
-  mode_CM2  : 'decremental'
+  mode_CM2  : decremental
+
+RO:
+  temp_label  : Temperature
+  curr_label  : Current
+  time_label  : current_time
