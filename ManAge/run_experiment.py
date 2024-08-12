@@ -1,4 +1,4 @@
-import sys, os, threading, time, serial, math, argparse
+import os, time, serial, math, argparse
 from tqdm import tqdm
 from pathlib import Path
 from experiment.clock_manager import CM
@@ -17,11 +17,19 @@ parent_parser.add_argument('vivado_srcs_dir', help="Specify the directory in whi
 parent_parser.add_argument('results_dir', help="Specify the directory into which the results will be stored")
 parent_parser.add_argument('N_Parallel', type=int, default=cfg.N_Parallel, help="Specify the number of parallell CUTs in a segment")
 
+# Subcommand: program
+parser_program = subparser.add_parser('program', help='Program the FPGA with the specified bitstream')
+parser_program.add_argument('bitstream_file', help="Specify the path to the bitstream file")
+
 # Subcommand: run
 parser_run = subparser.add_parser('run', parents=[parent_parser], help='Run the experiment by loading the bitstreams onto the FPGA')
 parser_run.add_argument('bitstream_file', help="Specify the path to the bitstream file")
 parser_run.add_argument('serial_port', help="Specify the serial port for UART transmission")
 parser_run.add_argument('baud_rate', type=int, help="Specify the baud rate of the UART transmission")
+
+parser_run.add_argument('-R', '--rising', action='store_true',help="Specify whether the experiment must be conducted under rising transitions")
+parser_run.add_argument('-F', '--falling', action='store_true',help="Specify whether the experiment must be conducted under falling transitions")
+parser_run.add_argument('-B', '--both', action='store_true',help="Specify whether the experiment must be conducted under both rising and falling transitions")
 
 parser_run.add_argument('-t', '--timeout', type=float, default=220, help="Set a read timeout value in seconds")
 
@@ -33,49 +41,25 @@ if __name__ == '__main__':
     # Parse arguments
     args = parser.parse_args()
 
-    
-    if args.subcommand == 'run':
+    if args.subcommand == 'program':
+        tcl_script = Path('tcl') / 'program.tcl'
+        os.system(f'vivado -mode batch -nolog -nojournal -source {tcl_script} -tclargs "{args.bitstream_file}"')
+
+    elif args.subcommand == 'run':
         # program device
         tcl_script = Path('tcl') / 'program.tcl'
         bit_file_name = Path(args.bitstream_file).stem
         os.system(f'vivado -mode batch -nolog -nojournal -source {tcl_script} -tclargs "{args.bitstream_file}"')
         time.sleep(2)
 
+        # create a folder for the bitstream in the results directory
+        bitstream_result_path = Path(args.results_dir) / bit_file_name
+        bitstream_result_path.mkdir(parents=True, exist_ok=True)
+
         # MMCM Initialization
         MMCM1 = CM(fin=cfg.fin, D=cfg.D1, M=cfg.M1, O=cfg.O1, mode=cfg.mode_CM1, fpsclk=cfg.fpsclk1)
         MMCM2 = CM(fin=MMCM1.fout, D=cfg.D2, M=cfg.M2, O=cfg.O2, mode=cfg.mode_CM2, fpsclk=cfg.fpsclk2)
         MMCM3 = CM(fin=MMCM1.fout, D=cfg.D2, M=cfg.M2, O=cfg.O2)
-
-        # Run Experiments
-        port = serial.Serial(args.serial_port, args.baud_rate, timeout=args.timeout)
-        R = Read()
-        T1 = threading.Thread(target=Read.read_data, args=(R, port))
-        T2 = threading.Thread(target=Read.read_data, args=(R, port))
-        port.reset_input_buffer()
-        print(port.name)
-
-        data_rising, data_falling = [], []
-
-        # Rising Transitions
-        port.write('RUS'.encode('Ascii'))
-        T1.start()
-        T1.join()
-        packet = R.packet
-        data_rising += list(packet[:-3])
-
-        # Falling Transitions
-        port.write('RDS'.encode('Ascii'))
-        T2.start()
-        T2.join()
-        packet = R.packet
-        data_falling += list(packet[:-3])
-
-        # Reset
-        port.write('R'.encode('Ascii'))
-
-        # create a folder for the bitstream in the results directory
-        bitstream_result_path = Path(args.results_dir) / bit_file_name
-        bitstream_result_path.mkdir(parents=True, exist_ok=True)
 
         # processing parameters
         T = 1 / MMCM2.fout
@@ -85,34 +69,52 @@ if __name__ == '__main__':
         N_Bytes = math.ceil((w_shift + args.N_Parallel) / 8)
         sps = MMCM2.sps / N_Sets
 
-        # Process Received Data
-        error = False
-        try:
-            segments_rising = get_segments_delays(data_rising, N_Bytes, w_shift, args.N_Parallel, sps)
-        except:
-            log_error(bit_file_name, args.results_dir, 'Rising')
-            error = True
+        # Serial Port
+        port = serial.Serial(args.serial_port, args.baud_rate, timeout=args.timeout)
 
-        try:
-            segments_falling = get_segments_delays(data_falling, N_Bytes, w_shift, args.N_Parallel, sps)
-        except:
-            log_error(bit_file_name, args.results_dir, 'Falling')
-            error = True
+        for idx, trans_arg in enumerate([args.rising, args.falling, args.both]):
+            if trans_arg is None:
+                continue
 
-        if error:
-            exit()
+            if idx == 0:
+                file_name = 'segments_rising.data'
+                trans_type = 'Rising'
 
-        # store segments
-        util.store_data(bitstream_result_path, 'segments_rising.data', segments_rising)
-        util.store_data(bitstream_result_path, 'segments_falling.data', segments_falling)
+            elif idx == 1:
+                file_name = 'segments_falling.data'
+                trans_type = 'Falling'
 
-        # Validate Results
-        validation_result_rising =  validate_result(segments_rising, args.vivado_srcs_dir, bit_file_name, args.N_Parallel)
-        validation_result_falling =  validate_result(segments_falling, args.vivado_srcs_dir, bit_file_name, args.N_Parallel)
+            else:
+                file_name = 'segments_both.data'
+                trans_type = 'Both'
 
-        # Log Results
-        log_results(validation_result_rising, bit_file_name, args.results_dir, 'Rising')
-        log_results(validation_result_falling, bit_file_name, args.results_dir, 'Falling')
+            R = Read(port)
+            rcvd_data = R.run_exp(type=trans_type)
+
+            if not rcvd_data:
+                rcvd_data = R.run_exp(type=trans_type)
+
+            # Process Received Data
+            error = False
+            try:
+                segments = get_segments_delays(rcvd_data, N_Bytes, w_shift, args.N_Parallel, sps)
+
+                # store segment
+                util.store_data(bitstream_result_path, file_name, segments)
+
+                # Validate Results
+                vivado_srcs_dir = str(Path(args.vivado_srcs_dir).parent)
+                validation_result_rising = validate_result(segments, vivado_srcs_dir, bit_file_name,
+                                                           args.N_Parallel)
+
+                # Log Results
+                log_results(validation_result_rising, bit_file_name, args.results_dir, trans_type)
+
+            except:
+                log_error(bit_file_name, args.results_dir, trans_type)
+
+        # Close port
+        port.close()
 
     elif args.subcommand == 'validate':
         # Create log files
@@ -130,18 +132,27 @@ if __name__ == '__main__':
 
             pbar.set_description(bit_file_name)
 
-            # Load segments
-            segments_rising = util.load_data((str(TC)), 'segments_rising.data')
-            segments_falling = util.load_data((str(TC)), 'segments_falling.data')
+            for segment_file in TC.glob('*.data'):
+                if 'rising' in segment_file.stem:
+                    trans_type = 'Rising'
+                elif 'falling' in segment_file.stem:
+                    trans_type = 'Falling'
+                elif 'both' in segment_file.stem:
+                    trans_type = 'Both'
+                else:
+                    continue
 
-            # Validate Results
-            validation_result_rising =  validate_result(segments_rising, args.vivado_srcs_dir, bit_file_name, args.N_Parallel)
-            validation_result_falling =  validate_result(segments_falling, args.vivado_srcs_dir, bit_file_name, args.N_Parallel)
+                # Load segment
+                segments = util.load_data(str(segment_file.parent), segment_file.name)
 
-            # Log Results
-            log_results(validation_result_rising, bit_file_name, args.results_dir, 'Rising')
-            log_results(validation_result_falling, bit_file_name, args.results_dir, 'Falling')
+                # Validate Results
+                validation_result_rising = validate_result(segments, args.vivado_srcs_dir, bit_file_name,
+                                                           args.N_Parallel)
+
+                # Log Results
+                log_results(validation_result_rising, bit_file_name, args.results_dir, trans_type)
 
             pbar.update(1)
+
     else:
         parser.print_help()
