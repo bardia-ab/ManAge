@@ -6,15 +6,8 @@ os.chdir(str(Path(__file__).parent.parent))
 
 from Ageing_Experiment.Ageing import Ageing
 
-def clear_last_line():
-    # Clears the last line in the terminal
-    sys.stdout.write('\x1b[1A')  # move cursor up to the last line
-    sys.stdout.write('\x1b[2K')  # clear line
-    sys.stdout.flush()
-
-
-RO_bitstream = '/home/bardia/Downloads/osci_lut6c_flood_stage2_wwee12_ff_unit_9eg_BLANKLUT_60clb.bit'
-blank_bitstream = '/home/bardia/Downloads/blank_zu9eg_jtag.bit'
+RO_bitstream = '/home/bardia/Desktop/bardia/ManAge_Data/Ageing_Experiment/RO_design/ageing.bit'
+blank_bitstream = '/home/bardia/Desktop/bardia/ManAge_Data/Ageing_Experiment/RO_design/blank_zu9eg_jtag.bit'
 N_Parallel = 50
 cycles = 14
 
@@ -46,7 +39,7 @@ full_vivado_srcs_dir = '/home/bardia/Desktop/bardia/Timing_Characterization/CR_X
 full_bitstreams_dir = '/home/bardia/Desktop/bardia/Timing_Characterization/CR_X2Y1/Bitstreams/X2Y1'
 full_results_dir = '/home/bardia/Desktop/bardia/ManAge_Data/Ageing_Experiment/Results_12_08_2024/full_char'
 
-ageing_exp.set_min_char(full_vivado_srcs_dir, full_bitstreams_dir, full_results_dir)
+ageing_exp.set_full_char(full_vivado_srcs_dir, full_bitstreams_dir, full_results_dir)
 
 pbar = tqdm(total=cycles)
 
