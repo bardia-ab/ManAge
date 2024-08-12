@@ -1,98 +1,102 @@
-import sys, os, time
+import time, subprocess, sys
 from pathlib import Path
-if not (Path(os.getcwd()).parts[-1] == Path(os.getcwd()).parts[-2] == 'ManAge'):
-    sys.path.append(str(Path(__file__).parent.parent))
-    os.chdir(str(Path(__file__).parent.parent))
-
 import utility.config as cfg
 
-# User Inputs
-RO_bitstream = sys.argv[1]
-blank_bitstream = sys.argv[2]
-minimal_char_bitstream_path = sys.argv[3]
-full_char_bitstream_path = sys.argv[4]
-store_path = sys.argv[5]
-cycles = int(sys.argv[6])
+class Ageing:
 
+    def __init__(self, RO_bitstream, blank_bitstream, N_Parallel):
+        self.RO_bitstream = RO_bitstream
+        self.blank_bitstream = blank_bitstream
+        self.N_Parallel = N_Parallel
+        self.iteration = 0
 
-# Experiment Parameters
-baud_rate = 230400
-COM_port = '/dev/ttyUSB0'
-N_Parallel = 50
+        # Timing
+        self.initial_heatup_time = 0
+        self.initial_recovery_time = 0
+        self.burning_time = 0
+        self.recovery_time = 0
 
-# Timing
-min = 60
-hour = 60 * min
-initial_heatup_time = 5 * min
-initial_recovery_time = 5 * min
-recovery_time = 20 * min
-burning_time = 15 * hour
+        # Experiment Parameters
+        self.baud_rate = 230400
+        self.serial_port = '/dev/ttyUSB0'
 
-# initial heat up
-program_script = str(Path('tcl') / 'program.tcl')
-os.system(f'vivado -mode batch -nolog -nojournal -source {program_script} -tclargs "{RO_bitstream}"')
-time.sleep(initial_heatup_time)
+    def set_timing(self, initial_heatup_time, initial_recovery_time, burning_time, recovery_time):
+        min = 60
+        hour = 60 * min
 
-# initial recovery
-os.system(f'vivado -mode batch -nolog -nojournal -source {program_script} -tclargs "{blank_bitstream}"')
-time.sleep(initial_recovery_time)
+        self.initial_heatup_time = initial_heatup_time * min
+        self.initial_recovery_time = initial_recovery_time * min
+        self.burning_time = burning_time * hour
+        self.recovery_time = recovery_time * min
 
-# minimal characterization paths
-char_experiment_script = str(Path(__file__).parent.parent / 'run_experiment.py')
-minimal_TCs = list(Path(minimal_char_bitstream_path).glob('*.bit'))
-minimal_vivado_srcs_path = str(Path(minimal_char_bitstream_path).parent.parent / 'Vivado_Sources')
+    def set_UART(self, baud_rate, serial_port):
+        self.baud_rate = baud_rate
+        self.serial_port = serial_port
 
-# full characterization paths
-full_TCs = list(Path(full_char_bitstream_path).glob('*.bit'))
-full_vivado_srcs_path = str(Path(full_char_bitstream_path).parent / 'Vivado_Sources')
+    def set_min_char(self, vivado_srcs_dir, bitstreams_dir, results_dir):
+        self.min_vivado_srcs_dir = Path(vivado_srcs_dir)
+        self.min_bitstreams_dir = Path(bitstreams_dir)
+        self.min_results_dir = Path(results_dir)
 
-for iteration in range(cycles):
-    minimal_char_result = Path(store_path) / 'Results' / 'minimal' / f'iter{iteration}'
-    full_char_result = Path(store_path) / 'Results' / 'full' / f'iter{iteration}'
+    def set_full_char(self, vivado_srcs_dir, bitstreams_dir, results_dir):
+        self.full_vivado_srcs_dir = Path(vivado_srcs_dir)
+        self.full_bitstreams_dir = Path(bitstreams_dir)
+        self.full_results_dir = Path(results_dir)
 
-    # create folder
-    minimal_char_result.mkdir(parents=True, exist_ok=True)
-    full_char_result.mkdir(parents=True, exist_ok=True)
+    def program(self, bitstream_file):
+        program_script =  Path(__file__).absolute().parents[1] / 'run_experiment.py'
+        subcommand = 'program'
+        command = f'{cfg.python} "{program_script}" {subcommand} {bitstream_file}'
+        result = subprocess.run(command, shell=True, capture_output=True, text=True)
 
-    # initial minimal characterization
-    for TC in minimal_TCs:
+        # Check for errors
+        if result.returncode != 0:
+            print("Error:", result.stderr)
+            exit()
 
-        os.system(
-            f'{cfg.python} {char_experiment_script} {N_Parallel} {COM_port} {baud_rate} {minimal_char_bitstream_path} {TC.stem} {str(minimal_char_result)} {minimal_vivado_srcs_path}')
+    def wait(self, delay):
+        time.sleep(delay)
 
-    # initial full characterization
-    for TC in full_TCs:
+    def heatup(self, init=False):
+        self.program(self.RO_bitstream)
+        delay = self.initial_heatup_time if init else self.burning_time
+        self.wait(delay)
 
-        os.system(
-            f'{cfg.python} {char_experiment_script} {N_Parallel} {COM_port} {baud_rate} {full_char_bitstream_path} {TC.stem} {str(full_char_result)} {full_vivado_srcs_path}')
+    def recovery(self, init=False):
+        self.program(self.blank_bitstream)
+        delay = self.initial_recovery_time if init else self.recovery_time
+        self.wait(delay)
 
+    def characterize(self, type):
+        if type == 'min':
+            vivado_srcs_dir = self.min_vivado_srcs_dir
+            bitstreams_dir = self.min_bitstreams_dir
+            results_dir = self.min_results_dir  / f'iter{self.iteration}'
+        elif type == 'full':
+            vivado_srcs_dir = self.full_vivado_srcs_dir
+            bitstreams_dir = self.full_bitstreams_dir
+            results_dir = self.full_results_dir  / f'iter{self.iteration}'
+        else:
+            raise ValueError(f'Type: {type} is invalid')
 
-    # burning
-    os.system(f'vivado -mode batch -nolog -nojournal -source {program_script} -tclargs "{RO_bitstream}"')
-    print(f'{iteration}- Burning')
-    time.sleep(burning_time)
+        # create folder
+        results_dir.mkdir(parents=True, exist_ok=True)
 
-    # recovery
-    os.system(f'vivado -mode batch -nolog -nojournal -source {program_script} -tclargs "{blank_bitstream}"')
-    print(f'{iteration}- Recovery')
-    time.sleep(recovery_time)
+        script = Path(__file__).absolute().parents[1] / 'run_experiment.py'
+        subcommand = 'run'
 
+        TCs = list(bitstreams_dir.glob('*.bit'))
 
-minimal_char_result = Path(store_path) / 'Results' / 'minimal' / f'iter{cycles}'
-full_char_result = Path(store_path) / 'Results' / 'full' / f'iter{cycles}'
+        for TC in TCs:
+            TC_srcs_dir = vivado_srcs_dir / TC.stem
+            command = f'{cfg.python} "{script}" {subcommand} {TC_srcs_dir} {results_dir} {self.N_Parallel} {TC} {self.serial_port} {self.baud_rate} -RFB -t 220'
+            result = subprocess.run(command, shell=True, capture_output=True, text=True)
 
-# create folder
-minimal_char_result.mkdir(parents=True, exist_ok=True)
-full_char_result.mkdir(parents=True, exist_ok=True)
+            # Check for errors
+            if result.returncode != 0:
+                print("Error:", result.stderr)
+                exit()
 
-# initial minimal characterization
-for TC in minimal_TCs:
+    def increment(self):
+        self.iteration += 1
 
-    os.system(
-        f'{cfg.python} {char_experiment_script} {N_Parallel} {COM_port} {baud_rate} {minimal_char_bitstream_path} {TC.stem} {str(minimal_char_result)} {minimal_vivado_srcs_path}')
-
-# initial full characterization
-for TC in full_TCs:
-
-    os.system(
-        f'{cfg.python} {char_experiment_script} {N_Parallel} {COM_port} {baud_rate} {full_char_bitstream_path} {TC.stem} {str(full_char_result)} {full_vivado_srcs_path}')
