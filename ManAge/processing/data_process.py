@@ -171,7 +171,6 @@ def validate_result(segments, vivado_srcs_path, TC_name, N_Parallel):
     try:
         vivado_srcs_path = next(Path(vivado_srcs_path).rglob(TC_name))
     except:
-        print(vivado_srcs_path, TC_name)
         exit()
 
     stats_file = vivado_srcs_path / 'stats.txt'
