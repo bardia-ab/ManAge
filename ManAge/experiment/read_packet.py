@@ -10,6 +10,7 @@ class Read:
 
 
     def run_exp(self, type='Both'):
+        data = []
         print(f'Serial Port: {self.port.name}\t{type} Transitions')
 
         # Start reading thread
@@ -35,7 +36,9 @@ class Read:
         # Reset
         self.reset()
 
-        return list(self.packet[:-3])
+        data = list(self.packet[:-3]) if self.packet else []
+
+        return data
 
     def reset(self):
         self.port.write(b'R')

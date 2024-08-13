@@ -1,3 +1,4 @@
+import os
 import time, subprocess, sys
 from pathlib import Path
 import utility.config as cfg
@@ -88,6 +89,9 @@ class Ageing:
         TCs = list(bitstreams_dir.glob('*.bit'))
 
         for TC in TCs:
+            if TC.stem in os.listdir(results_dir):
+                continue
+
             TC_srcs_dir = vivado_srcs_dir / TC.stem
             command = f'{cfg.python} "{script}" {subcommand} {TC_srcs_dir} {results_dir} {self.N_Parallel} {TC} {self.serial_port} {self.baud_rate} -RFB -t 220'
             result = subprocess.run(command, shell=True, capture_output=True, text=True)

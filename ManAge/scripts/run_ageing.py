@@ -35,8 +35,8 @@ min_results_dir = '/home/bardia/Desktop/bardia/ManAge_Data/Ageing_Experiment/Res
 ageing_exp.set_min_char(min_vivado_srcs_dir, min_bitstreams_dir, min_results_dir)
 
 # set full characterization paths
-full_vivado_srcs_dir = '/home/bardia/Desktop/bardia/Timing_Characterization/CR_X2Y1/Vivado_Sources/X2Y1'
-full_bitstreams_dir = '/home/bardia/Desktop/bardia/Timing_Characterization/CR_X2Y1/Bitstreams/X2Y1'
+full_vivado_srcs_dir = '/home/bardia/Desktop/bardia/Timing_Characterization/CR_X2Y1/Vivado_Sources'
+full_bitstreams_dir = '/home/bardia/Desktop/bardia/Timing_Characterization/CR_X2Y1/Bitstreams'
 full_results_dir = '/home/bardia/Desktop/bardia/ManAge_Data/Ageing_Experiment/Results_12_08_2024/full_char'
 
 ageing_exp.set_full_char(full_vivado_srcs_dir, full_bitstreams_dir, full_results_dir)
