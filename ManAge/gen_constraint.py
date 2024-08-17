@@ -1,4 +1,4 @@
-import sys, argparse
+import argparse
 from pathlib import Path
 from tqdm import tqdm
 
@@ -18,6 +18,7 @@ parser = argparse.ArgumentParser(prog='generate_constraint', description="Genera
 parser.add_argument('device_name', choices=Arch.get_models(), help='Specify the fabric of the FPGA')
 parser.add_argument('config_file', help="Specify the path to the configuration file")
 parser.add_argument('store_dir', help="Specify the directory to store output files")
+parser.add_argument('N_Parallel', type=int, help="Specify the number of parallel CUTs in a segment")
 
 parser.add_argument('-c', '--CUTs_count', type=int, help="Limit the number of CUTs whose constraints are desired to be generated")
 
@@ -33,6 +34,10 @@ if __name__ == '__main__':
     config_path, file = str(Path(args.config_file).parent), Path(args.config_file).name
     TC_idx = Path(args.config_file).stem
     TC = util.load_data(config_path, file)
+
+    # fix BELs
+    ConstConfig.fix_TC_bels(TC)
+
     if type(TC) == MinConfig:
         CUTs = TC.CUTs
     elif type(TC) == Config:
@@ -57,8 +62,8 @@ if __name__ == '__main__':
     for idx, cut in enumerate(CUTs):
 
         # CUT stats
-        CUT_idx = idx % cfg.N_Parallel
-        Seg_idx = idx // cfg.N_Parallel
+        CUT_idx = idx % args.N_Parallel
+        Seg_idx = idx // args.N_Parallel
         w_Error_Mux_In = f'w_Error({Seg_idx})({CUT_idx})'
 
         try:
@@ -67,6 +72,9 @@ if __name__ == '__main__':
         except ValueError as e:
             print(f'TC{TC_idx}>>CUT{cut.index}')
             continue
+
+        # Fix LUT BELs
+        ConstConfig.fix_bels(TC, cut)
 
         # Fill cells
         configuration.fill_cells(device.site_dict, cut, idx)
