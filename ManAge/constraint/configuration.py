@@ -115,3 +115,58 @@ class ConstConfig:
         D_CUTs_odd = [D_CUT for D_CUT in TC.D_CUTs if ConstConfig.split_function(D_CUT, method) == 1]
 
         return D_CUTs_even, D_CUTs_odd
+
+    @staticmethod
+    def fix_bels(TC, cut):
+        for sublut in cut.subLUTs:
+            LUT_primitive = TC.LUTs[sublut.get_LUT_name()]
+            if len(LUT_primitive.subLUTs) == 1 and sublut.output is None:
+                continue
+
+            if sublut.output and cfg.MUXED_CLB_out_pattern.match(sublut.output):
+                sublut.name = re.sub('[56]LUT', '5LUT', sublut.name)
+                sublut.bel = nd.get_port(sublut.name)
+
+            if sublut.output and cfg.CLB_out_pattern.match(sublut.output):
+                sublut.name = re.sub('[56]LUT', '6LUT', sublut.name)
+                sublut.bel = nd.get_port(sublut.name)
+
+            if sublut.output is None:
+                other_sublut = next(filter(lambda x: x != sublut, LUT_primitive.subLUTs))
+                if other_sublut.output is None:
+                    continue
+
+                elif other_sublut.output and cfg.MUXED_CLB_out_pattern.match(other_sublut.output):
+                    sublut.name = re.sub('[56]LUT', '6LUT', sublut.name)
+                    sublut.bel = nd.get_port(sublut.name)
+                else:
+                    sublut.name = re.sub('[56]LUT', '5LUT', sublut.name)
+                    sublut.bel = nd.get_port(sublut.name)
+
+    @staticmethod
+    def fix_TC_bels(TC):
+        for LUT_primitive in TC.LUTs.values():
+            LUT_primitive.subLUTs.sort(key=lambda x: 0 if x.output else 1)
+            for sublut in LUT_primitive.subLUTs:
+                if len(LUT_primitive.subLUTs) == 1 and sublut.output is None:
+                    continue
+
+                if sublut.output and cfg.MUXED_CLB_out_pattern.match(sublut.output):
+                    sublut.name = re.sub('[56]LUT', '5LUT', sublut.name)
+                    sublut.bel = nd.get_port(sublut.name)
+
+                if sublut.output and cfg.CLB_out_pattern.match(sublut.output):
+                    sublut.name = re.sub('[56]LUT', '6LUT', sublut.name)
+                    sublut.bel = nd.get_port(sublut.name)
+
+                if sublut.output is None:
+                    other_sublut = next(filter(lambda x: x != sublut, LUT_primitive.subLUTs))
+                    if other_sublut.output is not None:
+                        continue
+
+                    if other_sublut.port[1] == '5':
+                        sublut.name = re.sub('[56]LUT', '6LUT', sublut.name)
+                        sublut.bel = nd.get_port(sublut.name)
+                    else:
+                        sublut.name = re.sub('[56]LUT', '5LUT', sublut.name)
+                        sublut.bel = nd.get_port(sublut.name)
