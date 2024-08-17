@@ -16,7 +16,8 @@ parser.add_argument("origin", help='Specify the origin of CUTs')
 parser.add_argument("iteration", type=int, help='Specify the iteration of path finding')
 parser.add_argument('minimal_config_dir', help='Specify the directory to store minimal configurations')
 
-parser.add_argument('-l', '--local', action='store_true', help='Specify the local CUTs in minimal configurations')
+parser.add_argument('-l', '--local', action='store_true', help='Find only local CUTs in minimal configurations')
+parser.add_argument('-q', '--quad', action='store_true', help='Cover only quad PIP in minimal configurations')
 parser.add_argument('-p', '--prev_config_dir', help='Specify the directory of previous stored configurations')
 
 if __name__ == "__main__":
@@ -40,7 +41,10 @@ if __name__ == "__main__":
     device.remove_untested_edges()
     device.weight = PathIn.weight_function(device.G, 'weight')
 
-    pips = device.get_pips(args.origin, local=args.local)
+    if args.quad:
+        pips = device.get_quad_pips(args.origin)
+    else:
+        pips = device.get_pips(args.origin, local=args.local)
 
     test_collection = TestCollection(args.iteration, args.origin, args.minimal_config_dir, prev_config_dir=args.prev_config_dir, queue=pips)
 
