@@ -28,17 +28,17 @@ class RLOC_Collection:
         # create the store path directory
         Path(self.config_dir).mkdir(parents=True, exist_ok=True)
 
+        #load covered_pips
+        if self.prev_config_dir is not None:
+            prev_rloc_collection = util.load_data(self.prev_config_dir, 'rloc_collection.data')
+            self.covered_pips = prev_rloc_collection.covered_pips.copy()
+
         # add origin
         self.origins.append(self.origin)
 
         # set minimal_configs files
         self.minimal_configs = list(Path(self.minimal_config_dir).glob('TC*'))
         self.minimal_configs.sort(key=lambda x: int(re.findall('\d+', x.stem).pop()))
-
-        #load covered_pips
-        if self.prev_config_dir is not None:
-            prev_rloc_collection = util.load_data(self.prev_config_dir, 'rloc_collection.data')
-            self.covered_pips = prev_rloc_collection.covered_pips.copy()
 
         # create pbar
         length = len(self.minimal_configs)
