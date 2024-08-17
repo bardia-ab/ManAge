@@ -21,7 +21,7 @@ parent_parser.add_argument('-y', '--y_label', default='FPGA Rows', help='Label o
 parent_parser.add_argument('-s', '--figsize', type=int, nargs=2, default=(8, 6), help='Size of the Figure (Width, Height)')
 
 # Subcommand: tile_map
-parser_tile_map = subparser.add_parser('tile_map', parents=[parent_parser], help="Draw the heatmap of the compositions of the devices's coordinates")
+parser_tile_map = subparser.add_parser('tile_map', parents=[parent_parser], help="Draw the heatmap of the compositions of the device's coordinates")
 
 # Subcommand: node_map
 parser_node_map = subparser.add_parser('node_map', parents=[parent_parser], help="Draw the heatmap of the homogeneity of the devices's Nodes")
