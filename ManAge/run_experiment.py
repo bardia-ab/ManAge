@@ -15,7 +15,7 @@ subparser = parser.add_subparsers(title='subcommands', dest='subcommand')
 parent_parser = argparse.ArgumentParser(add_help=False)
 parent_parser.add_argument('vivado_srcs_dir', help="Specify the directory in which TCs' source files are stored")
 parent_parser.add_argument('results_dir', help="Specify the directory into which the results will be stored")
-parent_parser.add_argument('N_Parallel', type=int, default=cfg.N_Parallel, help="Specify the number of parallell CUTs in a segment")
+parent_parser.add_argument('N_Parallel', type=int, help="Specify the number of parallel CUTs in a segment")
 
 # Subcommand: program
 parser_program = subparser.add_parser('program', help='Program the FPGA with the specified bitstream')
@@ -73,7 +73,7 @@ if __name__ == '__main__':
         port = serial.Serial(args.serial_port, args.baud_rate, timeout=args.timeout)
 
         for idx, trans_arg in enumerate([args.rising, args.falling, args.both]):
-            if trans_arg is None:
+            if not trans_arg:
                 continue
 
             if idx == 0:
