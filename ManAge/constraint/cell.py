@@ -27,8 +27,8 @@ class Cell:
 
     def get_constraints(self):
         constraints = []
-        constraints.append(self.get_LOC())
         constraints.append(self.get_BEL())
+        constraints.append(self.get_LOC())
         if self.type == 'LUT':
             constraints.append(self.get_LOCK_PINS())
 
