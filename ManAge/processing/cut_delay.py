@@ -11,6 +11,7 @@ class CUT_Delay:
     path_idx        : int           = -1  # this is the index of the CUT in the segment
     rising_delay    : float         = 0
     falling_delay   : float         = 0
+    both_delay      : float         = 0
     edges           : List[Tuple]   = field(default_factory=list)
 
 
@@ -55,14 +56,16 @@ class CUTs_List:
         )
 
         # Convert results into dictionaries
-        rising_dict = {coord: rising_avg for coord, rising_avg, _ in results}
-        falling_dict = {coord: falling_avg for coord, _, falling_avg in results}
+        rising_dict = {coord: rising_avg for coord, rising_avg, _, _ in results}
+        falling_dict = {coord: falling_avg for coord, _, falling_avg, _ in results}
+        both_dict = {coord: both_avg for coord, _, _, both_avg in results}
 
-        return rising_dict, falling_dict
+        return rising_dict, falling_dict, both_dict
     @staticmethod
     def get_average_delay(coord, cuts):
         edges = [edge for cut in cuts for edge in cut.edges]
         rising_avg = sum(cut.rising_delay for cut in cuts) / len(edges)
         falling_avg = sum(cut.falling_delay for cut in cuts) / len(edges)
+        both_avg = sum(cut.both_delay for cut in cuts) / len(edges)
 
-        return coord, rising_avg, falling_avg
+        return coord, rising_avg, falling_avg, both_avg
