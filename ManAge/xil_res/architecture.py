@@ -44,7 +44,7 @@ class Arch:
 
 
     def init(self, non_clb_tiles):
-        device = util.load_data(cfg.load_path, f'device_{self.name}.data')
+        device = util.load_data(cfg.model_path, f'device_{self.name}.data')
         self.pips = device.pips
         self.site_dict = device.clb_site_dict
         self.wires_dict = device.wires_dict
@@ -318,6 +318,9 @@ class Arch:
 
     def get_pips(self, origin, local=False):
         desired_tile = f'{cfg.INT_label}_{origin}'
+        if not self.G:
+            self.set_compressed_graph(desired_tile)
+
         self.set_pips_length_dict(desired_tile)
 
         if local:
@@ -330,6 +333,15 @@ class Arch:
             pips = set(self.pips_length_dict.keys())
 
         return pips
+
+    def get_quad_pips(self, origin):
+        INT_tile = f'{cfg.INT_label}_{origin}'
+        pips = self.get_pips(origin)
+        pipjuncs = {node for edge in self.wires_dict[INT_tile] for node in edge if nd.get_tile(node) == INT_tile}
+        quad_wires = set(filter(lambda x: re.match('^(EE|WW)4.*', nd.get_port(x)), pipjuncs))
+        quad_pips = set(filter(lambda pip: any(map(lambda node: node in quad_wires, pip)), pips))
+
+        return quad_pips
 
     def reform_cost(self):
         for edge in self.G.edges():
