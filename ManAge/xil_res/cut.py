@@ -18,7 +18,7 @@ class CUT:
         return f'CUT{self.index}'
 
     def __eq__(self, other):
-        return type(self) == type(other) and self.origin == other.origin and self.index == other.index
+        return type(self) == type(other) and self.origin == other.origin and self.index == other.index and self.G == other.G
 
     def __hash__(self):
         return hash((self.origin, self.index))
