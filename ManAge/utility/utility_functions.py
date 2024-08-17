@@ -1,7 +1,9 @@
 import pickle, os, bz2, shutil
+from pathlib import Path
 
 def create_folder(FolderPath):
     try:
+        Path(FolderPath).mkdir(parents=True, exist_ok=True)
         os.mkdir(FolderPath)
     except FileExistsError:
         shutil.rmtree(FolderPath)
