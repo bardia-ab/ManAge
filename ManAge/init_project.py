@@ -6,7 +6,7 @@ import utility.config as cfg
 if __name__ == '__main__':
     util.create_folder(cfg.Data_path)
     util.create_folder(cfg.minimal_config_path)
-    util.create_folder(cfg.load_path)
+    util.create_folder(cfg.model_path)
     util.create_folder(cfg.graph_path)
     util.create_folder(cfg.config_path)
     util.create_folder(cfg.vivado_res_path)
@@ -17,5 +17,5 @@ if __name__ == '__main__':
 
     model_path = Path(__file__).absolute().parent.parent / 'models'
     for file in model_path.glob('*'):
-        dst = Path(cfg.load_path) / file.name
+        dst = Path(cfg.model_path) / file.name
         shutil.copy(file, dst)

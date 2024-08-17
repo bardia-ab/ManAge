@@ -13,7 +13,7 @@ pyteman_path        = config[platform.system()]['pyteman_path']
 
 ############## Directories
 minimal_config_path = os.path.join(Data_path, 'Minimal_Configurations')
-load_path           = os.path.join(Data_path, 'Load')
+model_path           = Path(__file__).absolute().parents[2] / 'models'
 graph_path          = os.path.join(Data_path, 'Compressed_Graphs')
 config_path         = os.path.join(Data_path, 'Configurations')
 vivado_res_path     = os.path.join(Data_path, 'Vivado_Resources')
