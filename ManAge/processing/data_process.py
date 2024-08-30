@@ -249,8 +249,12 @@ def fill_D_CUTs(TC_CUT_path, TC):
 def load_segments_delays(valid_TC_result_dir: str):
     segments_rising = util.load_data(valid_TC_result_dir, 'segments_rising.data')
     segments_falling = util.load_data(valid_TC_result_dir, 'segments_falling.data')
+    try:
+        segments_both = util.load_data(valid_TC_result_dir, 'segments_both.data')
+    except:
+        segments_both = []
 
-    return list(chain(*segments_rising)), list(chain(*segments_falling))
+    return list(chain(*segments_rising)), list(chain(*segments_falling)), list(chain(*segments_both))
 
 def load_skew(skew_path, TC):
     skew_dict = {}
@@ -285,11 +289,11 @@ def fill_cuts_list(TC_result_path, TC_CUT_path, TC, pbar, skew_path=None):
     cuts_list = fill_D_CUTs(TC_CUT_path, TC)
 
     # load segments
-    segments_rising, segments_falling = load_segments_delays(results_path)
+    segments_rising, segments_falling, segments_both = load_segments_delays(results_path)
 
     if len(cuts_list.CUTs) != len(segments_rising):
         CR = TC_CUT_path.split("\\")[-1]
-        print(f'{CR}: {TC}')
+        #print(f'{CR}: {TC}')
         return []
 
     # load skew
@@ -300,12 +304,10 @@ def fill_cuts_list(TC_result_path, TC_CUT_path, TC, pbar, skew_path=None):
         D_CUT.seg_idx = D_CUT_idx // cfg.N_Parallel
         skew = skew_dict[(D_CUT.seg_idx, D_CUT.path_idx)] if skew_dict else 0
 
-        try:
-            D_CUT.rising_delay = segments_rising[D_CUT_idx][1] - skew
-        except:
-            breakpoint()
-
+        D_CUT.rising_delay = segments_rising[D_CUT_idx][1] - skew
         D_CUT.falling_delay = segments_falling[D_CUT_idx][1] - skew
+        if segments_both:
+            D_CUT.both_delay = segments_both[D_CUT_idx][1] - skew
 
     pbar.update(1)
 
@@ -329,21 +331,22 @@ def merge_df(ref_df, df):
 
     return filtered_ref_df, filtered_df
 
-def add_incr_delay_columns(ref_df, df, rising_column, falling_column):
-    # Calculate the percentage increase for 'rising_delay' and 'falling_delay'
-    df[rising_column] = ((df['rising_delay'] - ref_df['rising_delay']) / ref_df['rising_delay']) * 100
-    df[falling_column] = ((df['falling_delay'] - ref_df['falling_delay']) / ref_df['falling_delay']) * 100
+def add_incr_delay_column(ref_df, df, new_column, delay_column):
+    df[new_column] = ((df[delay_column] - ref_df[delay_column]) / ref_df[delay_column]) * 100
 
     return df
 
-def get_aged_df(df, incr_column, removed_columns):
-    df = df.drop(columns=removed_columns)
+def get_aged_df(df, incr_column):
     df = df[df[incr_column] > 0]
     df.sort_values(by=incr_column, ascending=False)
     return df
 
-def get_edge_type_regex_freq_dict(df, type='pip'):
+def get_edge_type_regex_freq_dict(df, type='pip', desired_region=None):
     edges = [edge for edges in df['edges'] for edge in edges]
+
+    if desired_region:
+        xmin, ymin, xmax, ymax = desired_region
+        edges = list(filter(lambda e: all(map(lambda n: nd.is_tile_in_rectangle((xmin, ymin), (xmax, ymax), nd.get_tile(n)), e)), edges))
 
     # filter pips
     edges = list(filter(lambda e: Edge(e).get_type() == type, edges))
