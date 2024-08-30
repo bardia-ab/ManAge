@@ -268,57 +268,33 @@ def get_data_matrix(input_dict, all_coords, apply_type=True):
 
     return data
 
-def plot_ageing_hist(ageing_list, store_file):
-    # Plotting the histogram
-    fig, ax = plt.subplots(figsize=(12, 8))  # Set the figure size (optional)
-    counts, bins, patches = plt.hist(ageing_list, bins=10, color='#e38e34', alpha=1, edgecolor='white')  # Create histogram
+def plot_hist(ageing_list, store_file, figsize=(12, 8)):
+    fig, ax = plt.subplots(figsize=figsize)
+    counts, bins, patches = plt.hist(ageing_list, bins=10, color=plot_settings['hist.facecolor'],
+                                     alpha=plot_settings['hist.alpha'], edgecolor='white')
+    # statistics
+    mean = np.mean(ageing_list)
+    std = np.std(ageing_list)
 
-    # Set font and font size for annotations
-    font_annot = {'family': 'Arial', 'color': 'black', 'weight': 'normal', 'size': 15}
-
-    # Add annotations on top of the bars
-    for count, bin, patch in zip(counts, bins, patches):
-        height = patch.get_height()  # Get the height of each bar
-        plt.text(patch.get_x() + patch.get_width() / 2, height + 0.1, f'{int(count)}', ha='center', va='bottom', fontdict=font_annot)
-
-    # Set font and font size for labels and title
-    font = {'family': 'Arial', 'color': 'black', 'weight': 'normal', 'size': 20}
-
-    ax.set_xlabel('Degradation %', fontdict=font, labelpad=15)
-    ax.set_ylabel('Frequency', fontdict=font, labelpad=15)
-    # ax.set_title('Histogram with Customizations', fontdict=font)
-
-    # Set font size for tick labels
-    plt.xticks(fontsize=17, fontfamily='Arial')
-    plt.yticks(fontsize=17, fontfamily='Arial')
-
-    # Adjust space between ticks and tick labels
-    ax.tick_params(axis='x', pad=10)  # Adjust the pad for x-axis ticks
-    ax.tick_params(axis='y', pad=10)  # Adjust the pad for y-axis ticks
-
-    # Activate grid and set grid line properties
-    # ax.grid(True, which='both', axis='y', linestyle='--', linewidth=0.5, color='gray')
-
-    # Set grid line colors and shapes for major and minor ticks
-    ax.grid(which='major', axis='y', linestyle='--', linewidth=0.5, color='grey')
-    # ax.grid(which='minor', axis='y', linestyle=':', linewidth=0.5, color='green')
-
-    # Remove specific borders
-    for dir in ['right', 'left', 'top', 'bottom']:
-        ax.spines[dir].set_visible(False)
-
+    axis_setting(ax, 'Degradation (%)', 'Occurrence', counts=counts, bins=bins, patches=patches, mean=mean, std=std)
     plt.savefig(store_file, bbox_inches='tight')
 
     return bins
 
-def plot_edge_type_bar(aged_edge_freq_dict, store_file, xlabel='Edge Type', ylabel='Normalized Occurrence', figsize=(50, 8)):
+def plot_bar(aged_edge_freq_dict, store_file, xlabel='Edge Type', ylabel='Normalized Occurrence', figsize=(50, 8)):
     # Apply plot settings
     apply_plot_settings(plot_settings)
 
     # sort dict
     aged_edge_freq_dict = dict(sorted(aged_edge_freq_dict.items(), key=lambda item: item[1], reverse=True))
 
+    # adjust figure size
+    num_bars = len(aged_edge_freq_dict)
+    gap_between_bars = 0.5
+    figsize = (num_bars * gap_between_bars, figsize[1])
+
     fig, ax = plt.subplots(figsize=figsize)
+    axis_setting(ax, xlabel, ylabel)
 
     # Extract keys and values
     names = [str(key) for key in aged_edge_freq_dict.keys()]
@@ -328,36 +304,7 @@ def plot_edge_type_bar(aged_edge_freq_dict, store_file, xlabel='Edge Type', ylab
                   linewidth=plot_settings['bar.linewidth'],
                   alpha=plot_settings['bar.alpha'])
 
-    axis_setting(ax, xlabel, ylabel)
-    '''# Set font and font size for labels and title
-    font = {'family': 'Arial', 'color': 'black', 'weight': 'normal', 'size': 20}
-
-    ax.set_xlabel('Edge', fontdict=font, labelpad=15)
-    ax.set_ylabel('Normalized Frequency', fontdict=font, labelpad=15)
-
-    # Set font size for tick labels
-    plt.xticks(fontsize=17, fontfamily='Arial', rotation=90)
-    plt.yticks(fontsize=17, fontfamily='Arial')
-
-    # Adjust space between ticks and tick labels
-    ax.tick_params(axis='x', pad=10)  # Adjust the pad for x-axis ticks
-    ax.tick_params(axis='y', pad=10)  # Adjust the pad for y-axis ticks
-
-    # Set grid line colors and shapes for major and minor ticks
-    ax.grid(which='major', axis='y', linestyle='--', linewidth=0.5, color='grey')
-    # ax.grid(which='minor', axis='y', linestyle=':', linewidth=0.5, color='green')
-
-    # Remove specific borders
-    for dir in ['right', 'left', 'top', 'bottom']:
-        ax.spines[dir].set_visible(False)
-
-    # Set font and font size for annotations
-    font_annot = {'family': 'Arial', 'color': 'black', 'weight': 'normal', 'size': 15}
-
-    # Annotate each bar with the frequency value
-    for bar in bars:
-        yval = bar.get_height()
-        plt.text(bar.get_x() + bar.get_width() / 2, yval + 0.05, f'{yval}', ha='center', va='bottom', fontdict=font_annot, rotation=90)'''
+    ax.set_xlim(-2 * gap_between_bars, num_bars)
 
     plt.savefig(store_file, bbox_inches='tight')
     plt.clf()
@@ -665,16 +612,12 @@ def axis_setting(ax, xlabel, ylabel, counts=None, bins=None, patches=None, mean=
     plt.xticks(rotation=plot_settings['xtick.rotation'])
     plt.yticks(rotation=plot_settings['ytick.rotation'])
 
-def plot_data(data, xlabel, ylabel, figsize=(8, 6)):
+def plot_data(x_vals, y_vals, xlabel, ylabel, output_file, figsize=(8, 6)):
     fig, ax = plt.subplots(figsize=figsize)
-    ax.plot(data, color=plot_settings['bar.facecolor'],
-                  linestyle='',
-            marker='.',
-                  linewidth=plot_settings['bar.linewidth'],
-                  alpha=plot_settings['bar.alpha']
-            )
-
     axis_setting(ax, xlabel, ylabel)
 
-    plt.tight_layout()
-    plt.show()
+    ax.plot(x_vals, y_vals, color=plot_settings['bar.facecolor'],
+            linestyle='--', marker='.', linewidth=plot_settings['bar.linewidth'], alpha=plot_settings['bar.alpha'])
+
+    plt.savefig(output_file, bbox_inches='tight')
+    plt.clf()
