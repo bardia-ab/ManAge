@@ -1,6 +1,4 @@
-import os.path
 import argparse
-import sys
 from xil_res.test_storage import TestCollection
 from xil_res.architecture import Arch
 from xil_res.path import PathOut, PathIn
