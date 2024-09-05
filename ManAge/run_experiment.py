@@ -32,6 +32,8 @@ parser_run.add_argument('-F', '--falling', action='store_true',help="Specify whe
 parser_run.add_argument('-B', '--both', action='store_true',help="Specify whether the experiment must be conducted under both rising and falling transitions")
 
 parser_run.add_argument('-t', '--timeout', type=float, default=220, help="Set a read timeout value in seconds")
+parser_run.add_argument('--skip_program', action='store_true', help="Skip programming")
+parser_run.add_argument('--skip_validate', action='store_true', help="Skip validation")
 
 # Subcommand: validate
 parser_validate = subparser.add_parser('validate', parents=[parent_parser], help="Validate the stored results")
@@ -46,11 +48,13 @@ if __name__ == '__main__':
         os.system(f'vivado -mode batch -nolog -nojournal -source {tcl_script} -tclargs "{args.bitstream_file}"')
 
     elif args.subcommand == 'run':
-        # program device
-        tcl_script = Path('tcl') / 'program.tcl'
         bit_file_name = Path(args.bitstream_file).stem
-        os.system(f'vivado -mode batch -nolog -nojournal -source {tcl_script} -tclargs "{args.bitstream_file}"')
-        time.sleep(2)
+
+        if not args.skip_program:
+            # program device
+            tcl_script = Path('tcl') / 'program.tcl'
+            os.system(f'vivado -mode batch -nolog -nojournal -source {tcl_script} -tclargs "{args.bitstream_file}"')
+            time.sleep(2)
 
         # create a folder for the bitstream in the results directory
         bitstream_result_path = Path(args.results_dir) / bit_file_name
@@ -102,13 +106,14 @@ if __name__ == '__main__':
                 # store segment
                 util.store_data(bitstream_result_path, file_name, segments)
 
-                # Validate Results
-                vivado_srcs_dir = str(Path(args.vivado_srcs_dir).parent)
-                validation_result_rising = validate_result(segments, vivado_srcs_dir, bit_file_name,
-                                                           args.N_Parallel)
+                if not args.skip_validate:
+                    # Validate Results
+                    vivado_srcs_dir = str(Path(args.vivado_srcs_dir).parent)
+                    validation_result_rising = validate_result(segments, vivado_srcs_dir, bit_file_name,
+                                                               args.N_Parallel)
 
-                # Log Results
-                log_results(validation_result_rising, bit_file_name, args.results_dir, trans_type)
+                    # Log Results
+                    log_results(validation_result_rising, bit_file_name, args.results_dir, trans_type)
 
             except:
                 log_error(bit_file_name, args.results_dir, trans_type)
