@@ -25,6 +25,11 @@ class CUT_Delay:
 class CUTs_List:
     CUTs    :   List[CUT_Delay]
 
+    def add_cut(self, cut, TC_idx):
+        edges = cut.main_path.get_edges()
+        cut_delay = CUT_Delay(origin=cut.origin, CUT_idx=cut.index, TC_idx=TC_idx, edges=edges)
+        self.CUTs.append(cut_delay)
+
     def filter_CUTs(self, **attributes):
         all_cuts = self.CUTs.copy()
         for k, v in attributes.items():
@@ -61,6 +66,7 @@ class CUTs_List:
         both_dict = {coord: both_avg for coord, _, _, both_avg in results}
 
         return rising_dict, falling_dict, both_dict
+
     @staticmethod
     def get_average_delay(coord, cuts):
         edges = [edge for cut in cuts for edge in cut.edges]
