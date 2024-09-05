@@ -78,7 +78,7 @@ proc gen_bitstream {proj_dir proj_name vivado_sources_dir N_Segments N_Parallel 
 
 	# replace new N_Segments & N_Partial
 	open_bd_design "$bd_file"
-	set_property -dict [list CONFIG.g_N_Parallel $N_Parallel CONFIG.g_N_Segments $N_Segments CONFIG.g_N_Partial $N_Partial] [get_bd_cells top_0]
+	set_property -dict [list CONFIG.g_n_parallel $N_Parallel CONFIG.g_segments $N_Segments CONFIG.g_n_partial $N_Partial] [get_bd_cells top_0]
 
 	# validate board design
 	save_bd_design
