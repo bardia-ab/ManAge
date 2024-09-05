@@ -1,6 +1,9 @@
 import sys, os, threading
 import time, serial, math
 from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent))
+os.chdir(str(Path(__file__).parent.parent))
+
 from experiment.clock_manager import CM
 from experiment.read_packet import Read
 import matplotlib.pyplot as plt
@@ -38,7 +41,7 @@ if __name__ == '__main__':
         Path(store_path).mkdir(parents=True, exist_ok=True)
 
         # program device
-        tcl_script = Path('tcl') / 'program.tcl'
+        tcl_script = Path('../tcl') / 'program.tcl'
         bitstream_file = Path(bitstream_path) / bit_file_name
         os.system(f'vivado -mode batch -nolog -nojournal -source {tcl_script} -tclargs "{bitstream_file}"')
         time.sleep(10)
