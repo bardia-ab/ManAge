@@ -48,6 +48,9 @@ class ConstConfig:
                 cell_name = cfg.name_prefix.format(idx, cfg.not_LUT_cell_name)
 
             elif subLUT.func == 'buffer':
+                if subLUT.get_occupancy() == 2:
+                    continue
+
                 cell_name = cfg.name_prefix.format(idx, cfg.buff_LUT_cell)
 
             else:
