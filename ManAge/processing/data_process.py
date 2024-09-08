@@ -398,3 +398,39 @@ def filter_above_threshold(df, thresh_value, column='rising_delay_increase_%'):
     filtered_df = df[df[column] >= threshold]
 
     return filtered_df
+
+def transform_nested_dict(nested_dict):
+    transformed_dict = {}
+    for outer_key, inner_dict in nested_dict.items():
+        for inner_key, value in inner_dict.items():
+            if inner_key not in transformed_dict:
+                transformed_dict[inner_key] = {}
+
+            transformed_dict[inner_key].update({outer_key: value})
+    return transformed_dict
+
+def store_aged_LUT_stats_table(LUT_stats, latex_file):
+    LUT_stats = transform_nested_dict(LUT_stats)
+
+    columns = [
+        ('Route Thru', ''),
+        ('Rising Transition', 'Mean'),
+        ('Rising Transition', 'STD'),
+        ('Falling Transition', 'Mean'),
+        ('Falling Transition', 'STD')
+    ]
+
+    multi_index = pd.MultiIndex.from_tuples(columns)
+    df_route_thru = pd.DataFrame(columns=multi_index)
+
+    for i, (route_thru, stat_dict) in enumerate(LUT_stats.items()):
+        r_mean = stat_dict['rising'][0]
+        r_std = stat_dict['rising'][1]
+        f_mean = stat_dict['falling'][0]
+        f_std = stat_dict['falling'][1]
+        df_route_thru.loc[i] = [route_thru, r_mean, r_std, f_mean, f_std]
+
+    df_route_thru = df_route_thru.sort_values(by=('Route Thru', ''))
+    latex_table = df_route_thru.to_latex(index=False, float_format="%.2f", label='tab:route-thru-stat', caption='')
+    with open(latex_file, 'w+') as file:
+        file.write(latex_table)
