@@ -1,15 +1,11 @@
 import copy
-import sys
 from heapq import heappush, heappop
-from abc import ABC, abstractmethod
 from itertools import count, product
 import networkx as nx
 from typing import List, Set, Tuple
 from xil_res.node import Node as nd
 from xil_res.edge import PIP, Edge
 from xil_res.clock_domain import ClockGroup
-from xil_res.primitive import SubLUT, FF
-#sys.path.insert(0, r'..\utility')
 import utility.config as cfg
 
 class Path:
@@ -22,7 +18,6 @@ class Path:
         self._nodes     = []
         self.subLUTs    = set()
         self.FFs        = set()
-        #self.prev_CD    = {}
         self.prev_CD = []
 
     def __repr__(self):
