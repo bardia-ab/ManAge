@@ -17,7 +17,7 @@ import concurrent.futures
 class Config:
     used_nodes  :   dict    = field(default_factory = dict)
     D_CUTs      :   List    = field(default_factory = list)
-    CD          :   dict    = field(default_factory = dict)
+    CD          :   dict    = field(default_factory = list)
     subLUTs     :   dict     = field(default_factory = dict)
     LUTs        :   dict     = field(default_factory = dict)
     FFs         :   dict     = field(default_factory = dict)
