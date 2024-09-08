@@ -177,7 +177,7 @@ if {[file exists $log_file] && ![dict get $options "-overwrite"]} {
 }
 
 # Implement design
-gen_bitstream $proj_dir $proj_name $vivado_sources_dir $N_Segments $N_Parallel $N_Partial $bitstream_file $dcp_file
+catch {gen_bitstream $proj_dir $proj_name $vivado_sources_dir $N_Segments $N_Parallel $N_Partial $bitstream_file $dcp_file}
 
 # Copy the log file
 set default_log_file "$proj_dir/$proj_name\.runs/impl_1/runme.log"
