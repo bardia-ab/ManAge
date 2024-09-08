@@ -14,6 +14,7 @@ General:
   print_message : False
   LUT_Dual      : True
   LUT_Capacity  : 2
+  subLUT_inputs : 1
   block_mode    : global
   route_thru    : True
 
@@ -60,7 +61,7 @@ TC:
   long_TC_process_time_local  : 7
 
 Constraints:
-  name_prefix : design_1_i/top_0/U0/Inst/CUTs_Inst/CUT_{}/{}
+  name_prefix       : design_1_i/top_0/U0/segmented_CPS_inst/CUTs_Inst/CUT_{}/{}
   launch_net        : Q_launch_int
   route_thru_net    : Route_Thru
   launch_FF_cell    : launch_FF

@@ -27,6 +27,7 @@ log_path            = os.path.join(Data_path, 'Logs')
 print_message = config['General']['print_message']
 LUT_Dual = config['General']['LUT_Dual']
 LUT_Capacity = config['General']['LUT_Capacity']
+subLUT_inputs = config['General']['subLUT_inputs']
 block_mode = config['General']['block_mode']   #global|local
 route_thru = config['General']['route_thru']
 pips_length_dict = {}
