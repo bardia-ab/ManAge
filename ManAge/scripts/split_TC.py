@@ -17,7 +17,7 @@ def split(TCs_path, TC_file, CR, store_path):
 ########
 
 device_name = 'xczu9eg'
-TCs_path = r'C:\Users\t26607bb\Desktop\CPS_Project\Path_Search\Ageing_Experiment\PV_TCs\Configurations'
+TCs_path = r'/home/bardia/Desktop/bardia/Timing_Characterization/Data_xczu9eg/Configurations'
 split_TC_path = Path(TCs_path).parent / 'split_TC'
 
 # device
@@ -44,6 +44,6 @@ for CR in device.CRs:
         del TC.CD, TC.FFs, TC.LUTs, TC.subLUTs, TC.used_nodes
         util.store_data(str(store_path), TC_file.name, TC)'''
 
-    Parallel(n_jobs=4)(delayed(split)(TCs_path, TC_file, CR, str(store_path)) for TC_file in Path(TCs_path).glob('TC*'))
+    Parallel(n_jobs=-1)(delayed(split)(TCs_path, TC_file, CR, str(store_path)) for TC_file in Path(TCs_path).glob('TC*'))
 
     pbar.update(1)

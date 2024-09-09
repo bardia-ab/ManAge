@@ -74,9 +74,9 @@ for json_file in json_files:
     TC.subLUTs = list(TC.filter_subLUTs(usage='used'))
 
     # block usage
-    Parallel(n_jobs=cfg.n_jobs, require='sharedmem')(delayed(ff.block_usage()) for ff in TC.FFs)
-    Parallel(n_jobs=cfg.n_jobs, require='sharedmem')(delayed(sublut.block_usage()) for sublut in TC.subLUTs)
-    Parallel(n_jobs=cfg.n_jobs, require='sharedmem')(delayed(lut.block_usage()) for lut in TC.LUTs)
+    Parallel(n_jobs=cfg.n_jobs, require='sharedmem')(delayed(ff.block_usage)() for ff in TC.FFs)
+    Parallel(n_jobs=cfg.n_jobs, require='sharedmem')(delayed(sublut.block_usage)() for sublut in TC.subLUTs)
+    Parallel(n_jobs=cfg.n_jobs, require='sharedmem')(delayed(lut.block_usage)() for lut in TC.LUTs)
 
     output_file = f'{Path(json_file).stem}.data'
     util.store_data(store_path, output_file, TC)

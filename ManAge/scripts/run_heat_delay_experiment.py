@@ -13,22 +13,26 @@ import utility.utility_functions as util
 import utility.config as cfg
 
 # bitstreams
-bitstream_path = r'/home/bardia/Desktop/bardia/ManAge_Data/heat_delay_experiment/bitstreams'
+bitstream_path = r'/home/bardia/Desktop/bardia/ManAge_Data/RO_design/Bitstream/temp_delay'
 bitstreams = list(Path(bitstream_path).glob('*.bit'))
-
-# temp
-temp_path = r'/home/bardia/Desktop/bardia/ManAge_Data/heat_delay_experiment/temp'
-Path(temp_path).mkdir(parents=True, exist_ok=True)
+bitstreams.sort()
 
 # result
-result_path = Path(bitstream_path).parent / 'results'
+result_path = Path(bitstream_path).parents[1] / 'results' / 'heat_delay_exp' / 'delay'
 result_path.mkdir(parents=True, exist_ok=True)
 
-# blank bitstream
-blank_bitstream = '/home/bardia/Downloads/blank_zu9eg_jtag'
+# temp
+temp_path = Path(result_path).parent / 'temperature'
+Path(temp_path).mkdir(parents=True, exist_ok=True)
 
-cycles = 15 * 60
-recovery_time = 5 * 60
+# blank bitstream
+blank_bitstream = '/home/bardia/Desktop/bardia/ManAge_Data/RO_design/blank_zu9eg_jtag.bit'
+
+cycles = 1.5 * 60
+recovery_time = 1 * 60
+
+# remove tested bitstreams
+bitstreams = set(filter(lambda b: b.stem not in os.listdir(result_path), bitstreams))
 
 # pbar
 pbar = tqdm(total=len(bitstreams))
@@ -36,154 +40,62 @@ pbar = tqdm(total=len(bitstreams))
 # Experiment Parameters
 baud_rate = 230400
 COM_port = '/dev/ttyUSB0'
-N_Parallel = 50
-
-# MMCM Initialization
-MMCM1 = CM(fin=100e6, D=1, M=15, O=15, mode='incremental', fpsclk=100e6)
-MMCM2 = CM(fin=MMCM1.fout, D=1, M=16, O=16, mode='decremental', fpsclk=100e6)
-MMCM3 = CM(fin=MMCM1.fout, D=1, M=16, O=16)
-
-delays_rising = []
-delays_falling = []
-temp = []
+N_Parallel = 1
 
 for bitstream in bitstreams:
+    pbar.set_description(bitstream.stem)
+
     # program device with blank bitstream
-    tcl_script = Path('tcl') / 'program.tcl'
-    command = f'vivado -mode batch -nolog -nojournal -source {tcl_script} -tclargs "{blank_bitstream}"'
-    result = subprocess.run(command, shell=True, capture_output=False, text=True)
+    pbar.set_postfix_str('programming blank bitstream')
+    exp_script = Path(__file__).parents[1].absolute() / 'run_experiment.py'
+    command = f'{cfg.python} "{exp_script}" program {blank_bitstream}'
+    result = subprocess.run(command, shell=True, capture_output=True, text=True)
 
     # Check for errors
     if result.returncode != 0:
         print("Error:", result.stderr)
 
+    pbar.set_postfix_str('recovery')
     time.sleep(recovery_time)
 
     # program device
-    tcl_script = Path('tcl') / 'program.tcl'
-    bitstream_file = Path(bitstream_path) / bitstream.stem
-    command = f'vivado -mode batch -nolog -nojournal -source {tcl_script} -tclargs "{bitstream_file}"'
-    result = subprocess.run(command, shell=True, capture_output=False, text=True)
+    pbar.set_postfix_str('programming target bitstream')
+    command = f'{cfg.python} "{exp_script}" program {bitstream}'
+    result = subprocess.run(command, shell=True, capture_output=True, text=True)
 
     # Check for errors
     if result.returncode != 0:
         print("Error:", result.stderr)
 
     # log temp
+    pbar.set_postfix_str('logging temperature')
     temp_script = Path('tcl') / 'log_temp.tcl'
-    temp_csv = str(Path(temp_path) / (bitstream.stem + '.csv'))
+    temp_csv = str(Path(temp_path) / (bitstream.with_suffix('.csv')).name)
     command = f'vivado -mode batch -nolog -nojournal -source {temp_script} -tclargs "{temp_csv}" "{cycles}"'
-    result = subprocess.run(command, shell=True, capture_output=False, text=True)
+    result = subprocess.run(command, shell=True, capture_output=True, text=True)
 
     # Check for errors
     if result.returncode != 0:
         print("Error:", result.stderr)
 
     # Run Experiments
-    port = serial.Serial(COM_port, baud_rate)
-    R = Read()
-    T1 = threading.Thread(target=Read.read_data, args=(R, port))
-    T2 = threading.Thread(target=Read.read_data, args=(R, port))
-    port.reset_input_buffer()
-    print(port.name)
+    pbar.set_postfix_str('run experiment')
+    command = f'{cfg.python} "{exp_script}" run None {result_path} {N_Parallel} {bitstream} {COM_port} {baud_rate} -RFB --skip_program --skip_validate'
+    result = subprocess.run(command, shell=True, capture_output=True, text=True)
 
-    rising_data = []
-    falling_data = []
-
-    # Rising Transitions
-    port.write('RUS'.encode('Ascii'))
-    T1.start()
-    T1.join()
-    packet = R.packet
-    rising_data += list(packet[:-3])
-
-    # Falling Transitions
-    port.write('RDS'.encode('Ascii'))
-    T2.start()
-    T2.join()
-    packet = R.packet
-    falling_data += list(packet[:-3])
-
-    # Reset
-    port.write('R'.encode('Ascii'))
-
-    # close port
-    port.close()
-
-    # processing parameters
-    T = 1 / MMCM2.fout
-    N_Sets = MMCM1.fvco // (MMCM2.fvco - MMCM1.fvco)
-    N_Samples = 56 * MMCM2.O * N_Sets / 2
-    w_shift = math.ceil(math.log2(N_Samples))
-    N_Bytes = math.ceil((w_shift + N_Parallel) / 8)
-    sps = MMCM2.sps / N_Sets
-
-    # Process Received Data
-    df = pd.read_csv(temp_csv)
-    temp.append(df.iat[-1, 0])
-
-    segments_rising = get_segments_delays(rising_data, N_Bytes, w_shift, N_Parallel, sps)
-    delays_rising.append(segments_rising[0][0])
-
-    segments_falling = get_segments_delays(falling_data, N_Bytes, w_shift, N_Parallel, sps)
-    delays_falling.append(segments_falling[0][0])
+    # Check for errors
+    if result.returncode != 0:
+        print("Error:", result.stderr)
 
     pbar.update(1)
 
-
-util.store_data(str(result_path), 'rising_delay.data', delays_rising)
-util.store_data(str(result_path), 'falling_delay.data', delays_falling)
-util.store_data(str(result_path), 'temp.data', temp)
-
 # program device with blank bitstream
-tcl_script = Path('tcl') / 'program.tcl'
-command = f'vivado -mode batch -nolog -nojournal -source {tcl_script} -tclargs "{blank_bitstream}"'
-result = subprocess.run(command, shell=True, capture_output=False, text=True)
+pbar.set_postfix_str('programming blank bitstream')
+exp_script = Path(__file__).parents[1].absolute() / 'run_experiment.py'
+command = f'{cfg.python} "{exp_script}" program {blank_bitstream}'
+result = subprocess.run(command, shell=True, capture_output=True, text=True)
 
 # Check for errors
 if result.returncode != 0:
     print("Error:", result.stderr)
 
-delays_rising = util.load_data(str(result_path), 'rising_delay.data')
-delays_falling = util.load_data(str(result_path), 'falling_delay.data')
-temp = util.load_data(str(result_path), 'temp.data')
-
-delays_rising = [val[1] for val in delays_rising]
-delays_falling = [val[1] for val in delays_falling]
-
-rising_tuple = list(zip(temp, delays_rising))
-falling_tuple = list(zip(temp, delays_falling))
-
-rising_tuple.sort(key=lambda x: x[0])
-falling_tuple.sort(key=lambda x: x[0])
-
-x_values = [val[0] for val in rising_tuple]
-r_values = [val[1] * 1e12 for val in rising_tuple]
-f_values = [val[1] * 1e12 for val in falling_tuple]
-
-fig, ax = plt.subplots(figsize=(12, 6))
-
-plt.plot(x_values, r_values, marker='o', label='Rising', color='#0097A7', linewidth=2)
-plt.plot(x_values, f_values, marker='D', label='Falling', color='#EC407A', linewidth=2)
-
-plt.legend(loc='upper left', fontsize=20)
-
-plt.grid(True, which='major', linestyle='--')
-plt.grid(True, which='minor', linestyle=':')
-
-# Set font and font size for labels and title
-font = {'family': 'Arial', 'color': 'black', 'weight': 'normal', 'size': 20}
-
-ax.set_xlabel('Temperature ($^\circ$C)', fontdict=font, labelpad=15)
-ax.set_ylabel('Delay (ps)', fontdict=font, labelpad=15)
-
-# Set font size for tick labels
-plt.xticks(fontsize=17, fontfamily='Arial')
-plt.yticks(fontsize=17, fontfamily='Arial')
-
-# Adjust space between ticks and tick labels
-ax.tick_params(axis='x', pad=10)  # Adjust the pad for x-axis ticks
-ax.tick_params(axis='y', pad=10)  # Adjust the pad for y-axis ticks
-
-plt.tight_layout()
-plt.savefig(str(result_path / 'heat-delay.pdf'), bbox_inches='tight')
