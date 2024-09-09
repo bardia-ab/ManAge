@@ -17,7 +17,7 @@ from xil_res.primitive import FF, LUT, SubLUT
 class Arch:
 
     #__slots__ = ('name', 'relocation', 'pips', 'wires_dict', 'tiles_map', 'CRs', 'G', 'pips_length_dict', 'weight')
-    def __init__(self, name: str, non_clb_tiles=False):
+    def __init__(self, name: str, non_clb_tiles=False, constraint=False):
         self.name               = name.lower()
         self.pips               = set()
         self.wires_dict         = {}
@@ -26,7 +26,7 @@ class Arch:
         self.site_dict          = {}
         self.G                  = nx.DiGraph()
         self.pips_length_dict   = {}
-        self.init(non_clb_tiles)
+        self.init(non_clb_tiles, constraint)
         self.weight             = weight_function(self.G, 'weight')
 
     def __repr__(self):
@@ -43,8 +43,12 @@ class Arch:
         self.__dict__.update(state)
 
 
-    def init(self, non_clb_tiles):
+    def init(self, non_clb_tiles, constraint):
         device = util.load_data(cfg.model_path, f'device_{self.name}.data')
+        if constraint:
+            self.site_dict = device.clb_site_dict
+            return
+
         self.pips = device.pips
         self.site_dict = device.clb_site_dict
         self.wires_dict = device.wires_dict

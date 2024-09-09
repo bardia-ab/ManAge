@@ -3,6 +3,7 @@ import networkx as nx
 from itertools import product
 from xil_res.node import Node as nd
 import utility.config as cfg
+import utility.utility_functions as util
 
 class Net:
 
@@ -74,12 +75,12 @@ class Net:
 
     @staticmethod
     def get_g_buffer(G):
-        #buffer_in = list(filter(lambda node: cfg.LUT_in_pattern.match(node) and G.out_degree(node) != 0, G))
-        if any(filter(lambda node: cfg.MUXED_CLB_out_pattern.match(node), G)):
+        if (any(filter(lambda node: cfg.MUXED_CLB_out_pattern.match(node) or cfg.LUT_in6_pattern.match(node), G)) and
+                not any(filter(lambda node: cfg.CLB_out_pattern.match(node), G))):
             g_buffer = "00"
 
         elif any(filter(lambda node: cfg.LUT_in_pattern.match(node) and G.out_degree(node) != 0, G)):
-            buffer_in = next(filter(lambda node: cfg.LUT_in_pattern.match(node) and G.out_degree(node) != 0, G))
+            buffer_in = next(filter(lambda node: G.out_degree(node) != 0 and cfg.CLB_out_pattern.match(next(G.neighbors(node))), G))
             try:
                 not_in = next(filter(lambda node: cfg.LUT_in_pattern.match(node) and G.out_degree(node) == 0, G))
             except StopIteration:
@@ -156,5 +157,39 @@ class Net:
 
 
         return G_net, G_route_thru
-        
-        
+
+    @staticmethod
+    def parse_routing_string(routing_string):
+        tokens = routing_string.split()
+        dct = {}
+        last_node = None
+        Net.get_graph(dct, tokens, last_node)
+
+        G = nx.DiGraph()
+        for node, neighbors in dct.items():
+            edges = list(product({node}, neighbors))
+            G.add_edges_from(edges)
+
+        return G
+
+    @staticmethod
+    def get_graph(dct, tokens, last_node):
+        while tokens:
+            token = tokens.pop(0)
+            if token == '}':
+                return
+
+            elif token == '{':
+                Net.get_graph(dct, tokens, last_node)
+
+
+            else:
+                if last_node is not None:
+                    util.extend_dict(dct, last_node, token)
+
+                last_node = token
+
+if __name__ == '__main__':
+    routing_string = "{ CLE_CLE_L_SITE_0_DQ2 INT_NODE_SDQ_41_INT_OUT0 INT_INT_SDQ_75_INT_OUT0 INT_NODE_GLOBAL_9_INT_OUT1 INT_NODE_IMUX_27_INT_OUT1  { BYPASS_E14  { INT_NODE_IMUX_17_INT_OUT0  { BYPASS_E12  { INT_NODE_IMUX_13_INT_OUT1 BYPASS_E6 INT_NODE_IMUX_1_INT_OUT1 IMUX_E1 }  INT_NODE_IMUX_14_INT_OUT0 IMUX_E37 }  IMUX_E39 }  INT_NODE_IMUX_17_INT_OUT1  { IMUX_E33 }  BYPASS_E9 INT_NODE_IMUX_24_INT_OUT0  { IMUX_E15 }  IMUX_E47 }  IMUX_E13 }"
+    G = Net.parse_routing_string(routing_string)
+    print('hi')

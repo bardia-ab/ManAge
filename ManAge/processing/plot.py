@@ -343,9 +343,8 @@ def plot_heatmap_coord_freq(df, type):
     plt.gca().invert_yaxis()
     plt.show()
 
-def plot_bar_LUT_index(df, type, store_file):
-    # plots the rate of ageing at each index
-    incr_type = 'rising_delay_increase_%' if type == 'rising' else 'falling_delay_increase_%'
+def plot_bar_LUT_index(df, incr_delay_column, store_file, figsize=(8, 6)):
+
     def extract_indexes(edge_set):
         route_thrus = list(filter(lambda x: cfg.LUT_in_pattern.match(x[0]), edge_set))
         return [tuple(map(lambda x: re.sub('[A-H]', '[A-H]', nd.get_port_suffix(x)), edge)) for edge in route_thrus]
@@ -361,155 +360,35 @@ def plot_bar_LUT_index(df, type, store_file):
     total_all_indexes = [index for sublist in filtered_df['indexes'] for index in sublist]
     total_index_counts = pd.Series(total_all_indexes).value_counts().sort_index()
 
-    # Filter rows with positive rising_delay_increase_%
-    filtered_df = filtered_df[filtered_df[incr_type] > 0]
+    # Filter rows with positive incr_delay_column
+    filtered_df = filtered_df[filtered_df[incr_delay_column] > 0]
     all_indexes = [index for sublist in filtered_df['indexes'] for index in sublist]
     index_counts = pd.Series(all_indexes).value_counts().sort_index()
 
     # Normalize the counts
-
     normalized_counts = index_counts / total_index_counts
+
     # Plot the bar plot
+    aged_edge_freq_dict = normalized_counts.to_dict()
+    aged_edge_freq_dict = {f"{k[0]} → {k[1]}": v for k, v in aged_edge_freq_dict.items()}
+    plot_bar(aged_edge_freq_dict, store_file, 'Route Thru Type', figsize=figsize)
 
-    fig, ax = plt.subplots(figsize=(8, 6))
-    categories = normalized_counts.index.map(lambda el: f"{el[0]} → {el[1]}")
-    values = normalized_counts.values
-    bars = ax.bar(categories, values,
-                  color=plot_settings['bar.facecolor'],
-                  edgecolor=plot_settings['bar.edgecolor'],
-                  linewidth=plot_settings['bar.linewidth'],
-                  alpha=plot_settings['bar.alpha'])
-
-    axis_setting(ax, 'Route Thru', 'Normalized Occureence')
-    plt.savefig(store_file, bbox_inches='tight')
-def plot_hist_aged_LUT_ins(df, type, store_file, annotate=True, figsize=(8, 6)):
-    # Apply plot settings
-    apply_plot_settings(plot_settings)
-
-    # plots the rate of ageing at each index
-    incr_type = 'rising_delay_increase_%' if type == 'rising' else 'falling_delay_increase_%'
-
-    filtered_df = df[df[incr_type] > 0]
-
-    def contains_matching_element(edge_set, pattern):
-        nodes = {node for edge in edge_set for node in edge}
-        return any(map(lambda node: pattern.match(node), nodes))
+def plot_hist_aged_LUT_ins(df, incr_delay_column, store_file, figsize=(8, 6)):
 
     # Filter rows where edges contain matching elements
-    filtered_df = filtered_df[
-        filtered_df['edges'].apply(lambda edge_set: contains_matching_element(edge_set, cfg.LUT_in_pattern))]
+    filtered_df = df[df['edges'].apply(lambda edge_set: any(map(lambda x: cfg.LUT_in_pattern.match(x[0]), edge_set)))]
 
     # Extract rising_delay_increase_% values
-    trans_delay_increase_values = filtered_df[incr_type]
+    trans_delay_increase_values = filtered_df[incr_delay_column]
 
-    # Plot histogram
-    # Create some sample data
-    mean = np.mean(trans_delay_increase_values)
-    std = np.std(trans_delay_increase_values)
+    plot_hist(trans_delay_increase_values, store_file, figsize=figsize)
 
-    # Create a histogram
-    fig, ax = plt.subplots(figsize=figsize)
-    counts, bins, patches = ax.hist(trans_delay_increase_values, bins=10, alpha=plot_settings['hist.alpha'],
-                                    color=plot_settings['hist.facecolor'], edgecolor=plot_settings['hist.edgecolor'])
-
-    # Add a textbox with mean and std
-    ax.text(
-        0.85, 0.95, f'Mean: {mean:.2f}\nSTD: {std:.2f}',
-        transform=ax.transAxes,
-        fontsize=plot_settings['text.fontsize'],
-        weight=plot_settings['text.fontweight'],
-        bbox=plot_settings['text.boxstyle'],
-        horizontalalignment=plot_settings['text.horizontalalignment'],
-        verticalalignment=plot_settings['text.verticalalignment']
-    )
-
-    # Add labels and title
-    ax.set_xlabel('Degradation (%)', fontsize=plot_settings['axes.labelsize'], weight=plot_settings['axes.labelweight'],
-                  color=plot_settings['axes.labelcolor'], labelpad=plot_settings['axes.labelpad'])
-    ax.set_ylabel('Occurrence', fontsize=plot_settings['axes.labelsize'], weight=plot_settings['axes.labelweight'],
-                  color=plot_settings['axes.labelcolor'], labelpad=plot_settings['axes.labelpad'])
-
-    # Apply spine settings
-    plt.apply_spine_settings(ax, plot_settings)
-
-    # Adjust tick parameters for padding
-    ax.tick_params(axis='x', which='major', pad=plot_settings['xtick.major.pad'])
-    ax.tick_params(axis='y', which='major', pad=plot_settings['ytick.major.pad'])
-    ax.tick_params(axis='x', which='minor', pad=plot_settings['xtick.minor.pad'])
-    ax.tick_params(axis='y', which='minor', pad=plot_settings['ytick.minor.pad'])
-
-    if annotate:
-        # Add annotations on top of the bars
-        font_annot = {'family': 'Arial', 'color': 'black', 'weight': 'normal', 'size': 10}
-
-        for count, bin, patch in zip(counts, bins, patches):
-            height = patch.get_height()  # Get the height of each bar
-            plt.text(patch.get_x() + patch.get_width() / 2, height + 0.1, f'{int(count)}', ha='center', va='bottom',
-                     fontdict=font_annot)
-
-    # Set up the grid
-    ax.grid(True, which='both', color=plot_settings['grid.color'],
-            linestyle=plot_settings['grid.linestyle'],
-            linewidth=plot_settings['grid.linewidth'],
-            alpha=plot_settings['grid.alpha'])
-
-    # Enable minor ticks and add minor grid lines
-    ax.minorticks_on()
-    ax.grid(True, which='minor', color=plot_settings['grid.minor.color'],
-            linestyle=plot_settings['grid.minor.linestyle'],
-            linewidth=plot_settings['grid.minor.linewidth'],
-            alpha=plot_settings['grid.minor.alpha'])
-
-    # Turn off grid lines for the x-axis
-    ax.grid(False, which='both', axis='x')
-    '''fig, ax = plt.subplots(figsize=(12, 8))
-    counts, bins, patches = plt.hist(rising_delay_increase_values, bins=10, edgecolor='white')
-    # Set font and font size for annotations
-    font_annot = {'family': 'Arial', 'color': 'black', 'weight': 'normal', 'size': 15}
-
-    # Add annotations on top of the bars
-    for count, bin, patch in zip(counts, bins, patches):
-        height = patch.get_height()  # Get the height of each bar
-        plt.text(patch.get_x() + patch.get_width() / 2, height + 0.1, f'{int(count)}', ha='center', va='bottom',
-                 fontdict=font_annot)
-
-    # Set font and font size for labels and title
-    font = {'family': 'Arial', 'color': 'black', 'weight': 'normal', 'size': 20}
-
-    ax.set_xlabel('Degradation %', fontdict=font, labelpad=15)
-    ax.set_ylabel('Frequency', fontdict=font, labelpad=15)
-    # ax.set_title('Histogram with Customizations', fontdict=font)
-
-    # Set font size for tick labels
-    plt.xticks(fontsize=17, fontfamily='Arial')
-    plt.yticks(fontsize=17, fontfamily='Arial')
-
-    # Adjust space between ticks and tick labels
-    ax.tick_params(axis='x', pad=10)  # Adjust the pad for x-axis ticks
-    ax.tick_params(axis='y', pad=10)  # Adjust the pad for y-axis ticks
-
-    # Set grid line colors and shapes for major and minor ticks
-    ax.grid(which='major', axis='y', linestyle='--', linewidth=0.5, color='grey')
-    # ax.grid(which='minor', axis='y', linestyle=':', linewidth=0.5, color='green')
-
-    # Remove specific borders
-    for dir in ['right', 'left', 'top', 'bottom']:
-        ax.spines[dir].set_visible(False)'''
-
-    #plt.tight_layout()
-    #plt.show()
-    plt.savefig(store_file, bbox_inches='tight')
-
-def plot_hist_each_aged_LUT_index(df, type, store_file, figsize=(8, 6)):
-    stats = {type: {}}
-    incr_type = 'rising_delay_increase_%' if type == 'rising' else 'falling_delay_increase_%'
-
-    # Filter rows with positive rising_delay_increase_%
-    filtered_df = df[df[incr_type] > 0]
+def plot_hist_each_aged_LUT_index(df, incr_delay_column, store_file, figsize=(8, 6)):
+    trans_type = incr_delay_column.split('_')[0]
+    stats = {trans_type: {}}
 
     # Further filter for rows where edges contain matching elements
-    filtered_df = filtered_df[
-        filtered_df['edges'].apply(lambda edge_set: any(map(lambda x: cfg.LUT_in_pattern.match(x[0]), edge_set)))]
+    filtered_df = df[df['edges'].apply(lambda edge_set: any(map(lambda x: cfg.LUT_in_pattern.match(x[0]), edge_set)))]
 
     # Function to extract indexes from matching elements in the set
     def extract_indexes(edge_set):
@@ -524,24 +403,16 @@ def plot_hist_each_aged_LUT_index(df, type, store_file, figsize=(8, 6)):
 
     for idx, row in filtered_df.iterrows():
         for index in row['indexes']:
-            index_degrad_dict[index].append(row[incr_type])
+            index_degrad_dict[index].append(row[incr_delay_column])
 
     # Create six separate heatmaps, one for each index
     for i, (idx, data) in enumerate(index_degrad_dict.items()):
         mean = np.mean(data)
         std = np.std(data)
-        stats[type].update({idx: (mean, std)})
+        stats[trans_type].update({idx: (mean, std)})
 
-        # Create a histogram
-        fig, ax = plt.subplots(figsize=figsize)
-        counts, bins, patches = ax.hist(data, bins=10, alpha=plot_settings['hist.alpha'],
-                                        color=plot_settings['hist.facecolor'],
-                                        edgecolor=plot_settings['hist.edgecolor'])
-
-        axis_setting(ax, 'Degradation (%)', 'Occurrence', counts, bins, patches, mean, std)
-
-        store_file_idx = str(Path(store_file). parent / (Path(store_file).stem + f'_{idx[0].replace("[A-H]", "LUT_")}_{idx[1].replace("[A-H]", "")}.pdf'))
-        plt.savefig(store_file_idx, bbox_inches='tight')
+        store_file_idx = str(Path(store_file).parent / (Path(store_file).stem + f'_{idx[0].replace("[A-H]", "LUT_")}_{idx[1].replace("[A-H]", "")}.pdf'))
+        plot_hist(data, store_file_idx, figsize=figsize)
 
     return stats
 

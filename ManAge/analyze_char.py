@@ -1,9 +1,11 @@
 import argparse
 from pathlib import Path
 from tqdm import tqdm
+
+from utility.utility_functions import load_data
 from xil_res.architecture import Arch
 from processing.data_process import *
-from processing.plot import print_heatmap, plot_hist, plot_bar, plot_settings
+from processing.plot import *
 
 # create parser
 parser = argparse.ArgumentParser(prog='analyze_char', description='Analyze the results from the timing characterization experiment')
@@ -45,6 +47,7 @@ parser_plot.add_argument('input_df_dir', help='Specify the path to the directory
 parser_plot.add_argument('output_dir', help='Specify the directory into which the outputs must be stored')
 parser_plot.add_argument('--histogram', action='store_true', help='Draw the histogram of measured degradation')
 parser_plot.add_argument('--barplot', action='store_true', help='Draw the bar plot of degraded resources')
+parser_plot.add_argument('-l', '--LUT', action='store_true', help='Analyze LUT inputs exclusively')
 parser_plot.add_argument('-q', '--quantile', type=float, help='Draw bar plot for the specified quantile')
 parser_plot.add_argument('-s', '--figsize', type=int, nargs=2, default=(8, 6), help='Size of the Figure (Width, Height)')
 parser_plot.add_argument('--axes_labelsize', type=int, default=12, help='Size of the axes label')
@@ -220,6 +223,8 @@ if __name__ == '__main__':
         util.store_data(str(output_dir), output_file_name, df)
 
     elif args.subcommand == 'plot':
+        LUT_stats = {}
+
         for idx, trans_arg in enumerate([args.rising, args.falling, args.both]):
             if not trans_arg:
                 continue
@@ -265,6 +270,25 @@ if __name__ == '__main__':
                 trans_histogram_file = histogram_dir / f'{prefix}_degradation.pdf'
                 plot_hist(trans_ageing_list, trans_histogram_file, figsize=args.figsize)
 
+                if args.LUT:
+                    # create sub-directory
+                    LUT_dir = Path(args.output_dir) / 'LUT' / 'histogram'
+                    LUT_dir.mkdir(parents=True, exist_ok=True)
+
+
+                    plot_settings['axes.labelsize'] = args.axes_labelsize
+                    plot_settings['xtick.labelsize'] = args.xtick_labelsize
+                    plot_settings['ytick.labelsize'] = args.ytick_labelsize
+                    plot_settings['xtick.rotation'] = 0
+                    store_file = LUT_dir / f'{prefix}_degradation_LUT.pdf'
+                    plot_hist_aged_LUT_ins(trans_aged_df, incr_delay_column, store_file, figsize=args.figsize)
+
+                    # plot histogram of each type
+                    LUT_hist_type_dir = LUT_dir / 'type_histogram'
+                    LUT_hist_type_dir.mkdir(parents=True, exist_ok=True)
+
+                    store_file = LUT_hist_type_dir / f'{prefix}.pdf'
+                    LUT_stats.update(plot_hist_each_aged_LUT_index(trans_aged_df, incr_delay_column, store_file, figsize=args.figsize))
 
             if args.barplot:
                 # create sub-directory
@@ -293,6 +317,20 @@ if __name__ == '__main__':
                     store_file = barplot_dir / f'{prefix}_aged_{edge_type}.pdf'
                     plot_bar(norm_trans_aged_edge_freq_dict, store_file, xlabel=xlabel, figsize=args.figsize)
 
+                    if args.LUT:
+                        # create sub-directory
+                        LUT_dir = Path(args.output_dir) / 'LUT' / 'barplot'
+                        LUT_dir.mkdir(parents=True, exist_ok=True)
+
+                        # load df
+                        df = load_data(args.input_df_dir, 'df.data')
+
+                        plot_settings['axes.labelsize'] = args.axes_labelsize
+                        plot_settings['xtick.labelsize'] = args.xtick_labelsize
+                        plot_settings['ytick.labelsize'] = args.ytick_labelsize
+                        plot_settings['xtick.rotation'] = 90
+                        store_file = LUT_dir / f'{prefix}_aged_LUT.pdf'
+                        plot_bar_LUT_index(df, incr_delay_column, store_file, figsize=args.figsize)
 
                     if args.quantile:
                         # create sub-directory
@@ -316,3 +354,7 @@ if __name__ == '__main__':
                         plot_settings['xtick.rotation'] = 90
                         store_file = quantile_dir / f'{prefix}_aged_{edge_type}.pdf'
                         plot_bar(norm_trans_quantile_aged_edge_freq_dict, store_file, xlabel=xlabel, figsize=args.figsize)
+
+        if LUT_stats:
+            latex_file = LUT_hist_type_dir / f'route_thru_table.txt'
+            store_aged_LUT_stats_table(LUT_stats, latex_file)

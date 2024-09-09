@@ -129,7 +129,7 @@ class SubLUT(Primitive):
             if not ((nd.get_primitive(input) == 'LUT') and (0 <= nd.get_bel_index(input) <= 6)):
                 raise Exception(f'{input} is invalid for {self.name}!!!')
 
-            if self._inputs:
+            if len(self._inputs) > cfg.subLUT_inputs:
                 breakpoint()
 
             self._inputs.add(input)
@@ -266,12 +266,22 @@ class LUT(Primitive):
         for sublut in self.subLUTs:
             N_inputs = int(sublut.port[1])
             entries = self.get_truth_table(N_inputs)
-            input_idx = nd.get_bel_index(list(sublut.inputs)[0]) - 1
 
             if sublut.func == 'not':
+                input_idx = nd.get_bel_index(list(sublut.inputs)[0]) - 1
                 init_list = [str(int(not (entry[input_idx]))) for entry in entries]
             elif sublut.func == 'buffer':
+                input_idx = nd.get_bel_index(list(sublut.inputs)[0]) - 1
                 init_list = [str(entry[input_idx]) for entry in entries]
+            elif sublut.func == 'xor':
+                input_indexes = [nd.get_bel_index(list(sublut.inputs)[i]) - 1 for i in range(len(sublut.inputs))]
+                init_list = []
+                for entry in entries:
+                    value = 0
+                    for idx in input_indexes:
+                        value ^= entry[idx]
+
+                    init_list.append(str(value))
             else:
                 init_list = [str(0) for _ in entries]
 
