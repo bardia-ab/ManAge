@@ -33,13 +33,16 @@ if __name__ == '__main__':
                 key, _, value = line.rstrip('\n').split()
                 stats[key] = value
 
-        # output files
-        bitstream_file = args.bitstream_dir / TC_src_dir.with_suffix('.bit').name
-        DCP_file = args.DCP_dir / TC_src_dir.with_suffix('.dcp').name
-        log_file = args.log_dir / TC_src_dir.with_suffix('.log').name
+        N_segments = stats['N_Segments']
+        N_Partial = stats['N_Partial']
 
-        tcl_args = [f'"{args.proj_file}"', f'"{TC_src_dir}"', f'"{stats['N_Segments']}"', f'"{args.N_Parallel}"',
-                    f'"{stats['N_Partial']}"', f'"{bitstream_file}"', f'"{DCP_file}"', f'"{log_file}"']
+        # output files
+        bitstream_file = Path(args.bitstream_dir) / TC_src_dir.with_suffix('.bit').name
+        DCP_file = Path(args.DCP_dir) / TC_src_dir.with_suffix('.dcp').name
+        log_file = Path(args.log_dir) / TC_src_dir.with_suffix('.log').name
+
+        tcl_args = [f'"{args.proj_file}"', f'"{TC_src_dir}"', f'"{N_segments}"', f'"{args.N_Parallel}"',
+                    f'"{N_Partial}"', f'"{bitstream_file}"', f'"{DCP_file}"', f'"{log_file}"']
         command = f'vivado -mode batch -nolog -nojournal -source "{script}" -tclargs ' + ' '.join(tcl_args)
         result = subprocess.run(command, shell=True, capture_output=False, text=True)
 

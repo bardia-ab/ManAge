@@ -75,8 +75,9 @@ class Net:
 
     @staticmethod
     def get_g_buffer(G):
-        if (any(filter(lambda node: cfg.MUXED_CLB_out_pattern.match(node) or cfg.LUT_in6_pattern.match(node), G)) and
-                not any(filter(lambda node: cfg.CLB_out_pattern.match(node), G))):
+        route_thrus = list(filter(lambda e: cfg.LUT_in_pattern.match(e[0]), G.edges))
+        route_thru_cond = any(filter(lambda e: not cfg.LUT_in6_pattern.match(e[0]) and cfg.CLB_out_pattern.match(e[1]), route_thrus))
+        if not route_thru_cond:
             g_buffer = "00"
 
         elif any(filter(lambda node: cfg.LUT_in_pattern.match(node) and G.out_degree(node) != 0, G)):
