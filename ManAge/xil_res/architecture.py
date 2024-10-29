@@ -396,6 +396,13 @@ class Arch:
     def get_coords(self):
         return {coord for CR in self.CRs for coord in CR.coords}
 
+    def get_wire_ends(self, wire):
+        tile = nd.get_tile(wire)
+        wires = [w for w in self.wires_dict[tile] if wire in w]
+        wire_ends = [w for w in wires for end in w if end != wire]
+
+        return wire_ends
+
     @staticmethod
     def get_models():
         model_dir = Path(__file__).parent.parent.parent / 'models'
