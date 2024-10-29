@@ -86,7 +86,7 @@ class CUT:
             return
 
         self.main_path = Path()
-        self.main_path. nodes = nx.shortest_path(self.G, src, sink)
+        self.main_path.nodes = nx.shortest_path(self.G, src, sink)
 
     def get_DLOC_G(self, tiles_map, target_origin):
         DLOC_G = nx.DiGraph()
