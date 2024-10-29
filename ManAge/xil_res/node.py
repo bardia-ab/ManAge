@@ -560,6 +560,9 @@ class Node:
             direction = Node.get_direction(tile)
             RLOC_coord = Node.get_RLOC_coord(tile, origin)
             RLOC_tile = f'CLB_{direction}_{RLOC_coord}'
+        elif tile.startswith('BRAM'):
+            RLOC_coord = Node.get_RLOC_coord(tile, origin)
+            RLOC_tile = f'BRAM_{RLOC_coord}'
         else:
             raise ValueError(f'{tile}: invalid tile type')
 
