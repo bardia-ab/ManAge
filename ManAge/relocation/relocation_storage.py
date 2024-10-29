@@ -32,6 +32,7 @@ class RLOC_Collection:
         if self.prev_config_dir is not None:
             prev_rloc_collection = util.load_data(self.prev_config_dir, 'rloc_collection.data')
             self.covered_pips = prev_rloc_collection.covered_pips.copy()
+            self.origins = prev_rloc_collection.origins.copy()
 
         # add origin
         self.origins.append(self.origin)
