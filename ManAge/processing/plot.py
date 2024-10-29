@@ -159,7 +159,9 @@ def print_heatmap(input_dict, all_coords, rows, columns, store_file, palette, xl
     data = get_data_matrix(input_dict, all_coords, apply_type)
 
     # Create DataFrame
-    df = pd.DataFrame(data, index=list(rows), columns=list(columns))
+    rows = sorted(rows)
+    columns = sorted(columns)
+    df = pd.DataFrame(data, index=rows, columns=columns)
 
     # Reverses the y-axis, the origin is in bottom-left
     df = df.iloc[::-1, :]
