@@ -1,4 +1,4 @@
-import os, time
+import time
 import re
 from pathlib import Path
 import networkx as nx
@@ -6,7 +6,6 @@ from dataclasses import dataclass, field
 from itertools import product
 from typing import List, Set
 from tqdm import tqdm
-from itertools import chain
 from joblib import Parallel, delayed
 from xil_res.architecture import Arch
 from xil_res.minimal_config import MinConfig
@@ -16,6 +15,9 @@ import utility.utility_functions as util
 
 @dataclass
 class TestCollection:
+    """
+    This class provides a collection of objects required for creating Minimal Test Configurations.
+    """
     iteration           :   int
     origin              :   str
     minimal_config_dir  :   str
@@ -37,8 +39,8 @@ class TestCollection:
                                                                   for config_file in config_files)
             self.sort_prev_TCs(TC_num_CUTs)
             rloc_collection = util.load_data(str(self.prev_config_dir), 'rloc_collection.data')
-            if f'{cfg.INT_label}_{self.origin}' in rloc_collection.covered_pips:
-                covered_pips = {tuple(map(lambda node: f'{cfg.INT_label}_{self.origin}/{node}', pip)) for pip in rloc_collection.covered_pips[f'INT_{self.origin}']}
+            if f'INT_{self.origin}' in rloc_collection.covered_pips:
+                covered_pips = {tuple(map(lambda node: f'INT_{self.origin}/{node}', pip)) for pip in rloc_collection.covered_pips[f'INT_{self.origin}']}
             else:
                 covered_pips = set()
 
@@ -68,16 +70,34 @@ class TestCollection:
 
 
     def create_pbar(self):
+        """This function creates a progress bar
+        """
         custom_format = "{desc}{bar} {percentage:.0f}% | {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}] >> {postfix}"
         self.pbar = tqdm(total=len(self.queue), bar_format=custom_format, desc="\033[91m")
 
     def get_clock_domain(self, node):
+        """This function returns the ClockDomain object for the specified node (This node must match the regex pattern specified in the config.yaml file)
+
+        :param node: A node whose clock domain is of interest
+        :type node: str
+        :return: Respective clcok domain object
+        :rtype: ClockDomain
+        """
         return next(CD for CD in self.clock_domains if CD.pattern.match(node))
 
     def get_clock_group(self, clock_group: str):
+        """This function returns the ClockGroup object of the specified clock group name
+
+        :param clock_group: Desire clock group name
+        :type clock_group: str
+        :return: Respective group name object 
+        :rtype: ClockGroup
+        """
         return next(cg for cg in self.clock_groups if cg.name == clock_group)
 
     def create_clock_domains(self):
+        """This function creates clock domain and clock group objects specified in the config.yaml file
+        """
         # initialize clock domains
         for name, pattern in cfg.clock_domains.items():
             type = cfg.clock_domain_types[name]
@@ -93,16 +113,33 @@ class TestCollection:
             self.clock_groups.append(clock_group)
 
     def get_num_occupied_CUTs(self, config_file):
+        """This function returns the number of created CUTs at the current origin (used for iterations > 1)
+
+        :param config_file: The path to the Config file
+        :type config_file: pathlib.Path
+        :return: A tuple including the specified config_file and the number of occupied CUTs at the current origin
+        :rtype: Tuple
+        """
         TC = util.load_data(str(config_file.parent), config_file.name)
         num_CUTs = len([cut for cut in TC.D_CUTs if cut.origin == self.origin])
 
         return (config_file, num_CUTs)
 
     def sort_prev_TCs(self, TC_num_CUTs):
+        """This function sorts the configurations created in previous iterations based on the number of existing CUTs at the current origin
+
+        :param TC_num_CUTs: A collection of configurations and the number of their occupied CUTs at the current origin
+        :type TC_num_CUTs: List
+        """
         TC_num_CUTs.sort(key=lambda x: x[1])
         self.prev_config_files = [tup[0] for tup in TC_num_CUTs]
 
     def create_TC(self, device: Arch):
+        """This function creates a new MinConfig object or load the existing one in iterations > 1
+
+        :param device: Device under test
+        :type device: Arch
+        """
         if self.prev_config_files:
             prev_config_file = self.prev_config_files.pop(0)
             prev_TC = util.load_data(str(prev_config_file.parent), prev_config_file.name)
@@ -142,17 +179,34 @@ class TestCollection:
         self.assign_pip_v_node(TC.G)
 
     def assign_pip_v_node(self, G: nx.DiGraph):
+        """This function assigns a virtual node to the head of PIPs
+
+        :param G: Architecture graph
+        :type G: nx.DiGraph
+        """
         pip_v_nodes = {pip[1] for pip in self.queue}
         edges = set(product({cfg.pip_v}, pip_v_nodes))
         G.add_edges_from(edges, weight=0)
 
     def clean_pip_v_node(self, G: nx.DiGraph):
+        """This function removes the edge between the virtual node and the head of covered PIPs
+
+        :param G: Architecture graph
+        :type G: nx.DiGraph
+        """
         pip_v_nodes = {pip[1] for pip in self.queue}
         excess_out_nodes = set(G.neighbors(cfg.pip_v)) - pip_v_nodes
         excess_out_node_edges = set(product({cfg.pip_v}, excess_out_nodes))
         G.remove_edges_from(excess_out_node_edges)
 
     def finish_TC(self, TC: MinConfig):
+        """This function determines if the the minimal configuration must be terminated or not
+
+        :param TC: Minimal test configuration
+        :type TC: MinConfig
+        :return: True|False
+        :rtype: bool
+        """
         result = True
         coverage = (self.n_pips - len(self.queue)) / self.n_pips
         source_node = {CD.src_sink_node for CD in self.clock_domains if CD.type == 'source'}.pop()
@@ -179,6 +233,8 @@ class TestCollection:
         return result
 
     def update_coverage(self):
+        """This function updates the number of covered PIPs
+        """
         cut = self.TC.CUTs[-1]
         prior_length = len(self.queue)
         self.queue -= cut.get_covered_pips()
@@ -188,6 +244,8 @@ class TestCollection:
         self.pbar.update(prior_length - current_length)
 
     def store_TC(self):
+        """This function stores the created minimal test configuration
+        """
         util.store_data(self.minimal_config_dir, f'TC{self.TC.TC_idx}.data', self.TC)
         if not self.prev_config_files:
             self.TC_idx += 1
