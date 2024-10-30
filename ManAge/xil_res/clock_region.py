@@ -1,3 +1,4 @@
+from typing import Set
 from xil_res.node import Node as nd
 import utility.config as cfg
 
@@ -19,6 +20,15 @@ class CR:
         return hash(self.name)
 
     def get_tiles(self, device, tile_type=None):
+        """This function returns the tiles within the clock region
+
+        :param device: Device under test
+        :type device: Arch
+        :param tile_type: Type of the tiles (INT|CLB), defaults to None
+        :type tile_type: str
+        :return: Set of tiles   
+        :rtype: Set
+        """
         tiles = set()
         if tile_type == cfg.INT_label:
             tiles = set(filter(lambda x: nd.get_coordinate(x) in self.coords, device.get_INTs()))
@@ -30,6 +40,11 @@ class CR:
         return tiles
 
     def get_borders(self):
+        """This function returns the min and max X/Y coordinates of the clock region
+
+        :return: Max/Min X/Y coordinates
+        :rtype: int
+        """
         x_min = min(nd.get_x_coord(coord) for coord in self.coords)
         x_max = max(nd.get_x_coord(coord) for coord in self.coords)
         y_min = min(nd.get_y_coord(coord) for coord in self.coords)
