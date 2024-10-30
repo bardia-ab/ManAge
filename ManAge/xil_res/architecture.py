@@ -4,7 +4,7 @@ import sys, time, os
 from pathlib import Path
 import networkx as nx
 #sys.path.insert(0, r'..\utility')
-from typing import Set, Tuple
+from typing import Set, Tuple, List
 from itertools import product
 import utility.utility_functions as util
 import utility.config as cfg
@@ -70,6 +70,10 @@ class Arch:
                 pass
 
     def init_tiles_map(self):
+        """This function sets the tiles_map of he device under test
+        key: coordinate
+        value: {'CLB_W': West Tile|None, 'INT': INT_tile, 'CLB_E': East tile|None}
+        """
         for key in self.wires_dict:
             coordinate = nd.get_coordinate(key)
             tile_type = nd.get_tile_type(key)
@@ -82,6 +86,13 @@ class Arch:
             self.tiles_map[coordinate][tile_type] = key
 
     def init_CRs(self, CR_tile_dict, CR_HCS_Y_dict):
+        """This function initializes the clock regions
+
+        :param CR_tile_dict: A dictionary where keys are clock region names and values are a collection of coordinates in that clock region
+        :type CR_tile_dict: dict
+        :param CR_HCS_Y_dict: Y coordinate of the center of the clock region
+        :type CR_HCS_Y_dict: int
+        """
         for cr, tiles in CR_tile_dict.items():
             HCS_Y_coord = CR_HCS_Y_dict[cr]
             CR_obj = CR(cr, HCS_Y_coord)
@@ -89,18 +100,41 @@ class Arch:
             self.CRs.add(CR_obj)
 
     def get_CR(self, name):
+        """This function returns the CR object of the specified clock region name
+
+        :param name: Name of the clock region
+        :type name: str
+        :raises ValueError: When the specified name is invalid
+        :return: CR object
+        :rtype: CR
+        """
         try:
             return next(filter(lambda x: x.name == name, self.CRs))
         except StopIteration:
             raise ValueError(f'{name}: Invalid CR!')
 
     def get_INTs(self):
+        """This function returns all INT tiles in the device under test
+
+        :return: A set of INT tiles
+        :rtype: Set[str]
+        """
         return {tile for tile in self.wires_dict if tile.startswith(cfg.INT_label)}
 
     def get_CLBs(self):
+        """This function returns all CLBs in the divce under test
+
+        :return: A set of CLB tuiles
+        :rtype: Set[str]
+        """
         return {tile for tile in self.wires_dict if tile.startswith(cfg.CLB_label)}
 
     def get_FFs(self):
+        """This function returns the name of all FFs in the devide under test or the set graph attribute (G)
+
+        :return: A set of FF names
+        :rtype: Set[str]
+        """
         FFs = set()
         if self.G:
             clbs = {nd.get_tile(node) for node in self.G if nd.get_tile_type(node) == 'CLB'}
@@ -115,6 +149,11 @@ class Arch:
         return FFs
 
     def get_LUTs(self):
+        """This function returns the name of all LUTs in the devide under test or the set graph attribute (G)
+
+        :return: A set of LUT names
+        :rtype: Set[str]
+        """
         LUTs = set()
         if self.G:
             clbs = {nd.get_tile(node) for node in self.G if nd.get_tile_type(node) == 'CLB'}
@@ -128,6 +167,11 @@ class Arch:
         return LUTs
 
     def get_subLUTs(self):
+        """This function returns the name of all subLUTs in the devide under test or the set graph attribute (G)
+
+        :return: A set of subLUT names
+        :rtype: Set[str]
+        """
         subLUTs = set()
         if self.G:
             clbs = {nd.get_tile(node) for node in self.G if nd.get_tile_type(node) == 'CLB'}
@@ -142,6 +186,13 @@ class Arch:
         return subLUTs
 
     def blocking_nodes(self, TC):
+        """This function extracts all of the nodes being immediately connected to FF inputs (X|I) which are in the launch clock domain and have downstream PIPs
+
+        :param TC: Minimal Test Configuration
+        :type TC: MinConfig
+        :return: A set of nodes which must be excluded in routing    
+        :rtype: Set[str]
+        """
         #these are out mode nodes that have pips back to the INT tile
         out_mode_nodes = (node for node in self.G if nd.get_INT_node_mode(self.G, node) == 'out')
         blocking_nodes = {node for node in out_mode_nodes if self.G.out_degree(node) > 1}
@@ -155,11 +206,25 @@ class Arch:
 
     ############ Graph Generation ###############
     def gen_pips(self, tile: str) -> Set[Tuple[str, str]]:
+        """This function generates PIPs of the specified INT tile
+
+        :param tile: Desired INT tile
+        :type tile: str
+        :return: A set of PIPs
+        :rtype: Set[Tuple[str, str]]
+        """
         pips = {(f'{tile}/{pip[0]}', f'{tile}/{pip[1]}') for pip in self.pips}
 
         return pips
 
     def gen_site_pips(self, clb: str) -> Set[Tuple[str, str]]:
+        """This function generates the route thrus for the specified CLB tile
+
+        :param clb: Desired CLB tile
+        :type clb: str
+        :return: A set of site PIPs
+        :rtype: Set[Tuple[str, str]]
+        """
         site_pips = set()
         for i in range(65, 73):
             label = chr(i)
@@ -170,6 +235,21 @@ class Arch:
         return site_pips
 
     def get_graph(self, default_weight=0, xlim_down=float('-inf'), xlim_up=float('inf'), ylim_down=float('-inf'), ylim_up=float('inf')) -> nx.DiGraph:
+        """This function creates an architecture graph for the specified coordinates
+
+        :param default_weight: Default weight of the graph's edges, defaults to 0
+        :type default_weight: int   
+        :param xlim_down: Minimum X coordinate, defaults to float('-inf')
+        :type xlim_down: int
+        :param xlim_up: Maximum X coordinate, defaults to float('inf')
+        :type xlim_up: int
+        :param ylim_down: Minimum Y coordinate, defaults to float('-inf')
+        :type ylim_down: int
+        :param ylim_up: Maximum Y coordinate, defaults to float('inf')
+        :type ylim_up: int
+        :return: Create architecture graph
+        :rtype: nx.DiGraph
+        """
         G = nx.DiGraph()
         edges = set()
         desired_tiles = set(filter(lambda tile: xlim_down <= nd.get_x_coord(tile) <= xlim_up and ylim_down <= nd.get_y_coord(tile) <= ylim_up, self.wires_dict))
@@ -193,6 +273,13 @@ class Arch:
         return G
 
     def set_compressed_graph(self, tile: str, default_weight=1):
+        """This function creates a light architecture graph for the device under test
+
+        :param tile: Desired INT tile or origin
+        :type tile: str
+        :param default_weight: Default weight of the graph's edges, defaults to 1
+        :type default_weight: int
+        """
         if re.match('X\d+Y\d+', tile):
             tile = f'{cfg.INT_label}_{tile}'
 
@@ -251,6 +338,11 @@ class Arch:
             util.store_data(cfg.graph_path, f'G_{self.name}_{tile}.data', G)
 
     def set_pips_length_dict(self, tile: str):
+        """This function calculates the length of shortest path for covering all PIPs of the specified int tile
+
+        :param tile: Desired INT tile
+        :type tile: str
+        """
         sources = set(filter(cfg.Source_pattern.match, self.G))
         edges = set(product({'s'}, sources))
         sinks = set(filter(cfg.Sink_pattern.match, self.G))
@@ -269,6 +361,8 @@ class Arch:
         self.G.remove_nodes_from({'s', 't'})
 
     def remove_untested_edges(self):
+        """This function removees all edges which cannot be covered from the light architecture graph of the device under test
+        """
         edges = set()
         edges.update(filter(lambda x: 'VCC' in x[0], self.G.edges))
         edges.update(filter(lambda x: 'GCLK' in x[0], self.G.edges))
@@ -277,6 +371,13 @@ class Arch:
         self.G.remove_edges_from(edges)
 
     def get_local_pips(self, desired_tile):
+        """This function extracts the set of PIPs which cannot be covered with the resources within the coordinate of the specified INT tile
+
+        :param desired_tile: INT tile of the desired coordinate
+        :type desired_tile: str
+        :return: Local PIPs
+        :rtype: Set[Tuple[str, str]]
+        """
         G = copy.deepcopy(self.G)
         invalid_nodes = set(filter(lambda node: nd.get_coordinate(node) != nd.get_coordinate(desired_tile), self.G))
         G.remove_nodes_from(invalid_nodes)
@@ -321,6 +422,15 @@ class Arch:
         return covered_pips
 
     def get_pips(self, origin, local=False):
+        """This function returns either all or local PIPs of the spesified origin
+
+        :param origin: Desired Origin
+        :type origin: str
+        :param local: Specifies the type of PIPs, defaults to False
+        :type local: bool
+        :return: A set of PIPs  
+        :rtype: Set[Tuple[str, str]]
+        """
         desired_tile = f'{cfg.INT_label}_{origin}'
         if not self.G:
             self.set_compressed_graph(desired_tile)
@@ -339,6 +449,13 @@ class Arch:
         return pips
 
     def get_quad_pips(self, origin):
+        """This function returns the PIPs connected to Quad Nodes of the specified origin
+
+        :param origin: Desired Origin
+        :type origin: str
+        :return: Quad PIPs
+        :rtype: Set[Tuple[str, str]]
+        """
         INT_tile = f'{cfg.INT_label}_{origin}'
         pips = self.get_pips(origin)
         pipjuncs = {node for edge in self.wires_dict[INT_tile] for node in edge if nd.get_tile(node) == INT_tile}
@@ -348,6 +465,8 @@ class Arch:
         return quad_pips
 
     def reform_cost(self):
+        """This function modifies the initial weights of various edges in the light architecture graph
+        """
         for edge in self.G.edges():
             if nd.get_tile(edge[0]) == nd.get_tile(edge[1]):
                 if nd.get_tile_type(edge[0]) =='CLB':
@@ -365,6 +484,11 @@ class Arch:
             self.G.get_edge_data(*edge)['weight'] = weight
 
     def reset_costs(self, test_collection):
+        """This function resets the weights of the architecture graph's edges
+
+        :param test_collection: Test collection
+        :type test_collection: TestCollection
+        """
         desired_tile, queue = test_collection.origin, test_collection.queue
         for edge in self.G.edges:
             weight = self.weight(*edge, self.G.get_edge_data(*edge))
@@ -374,6 +498,14 @@ class Arch:
             self.G.get_edge_data(*edge)['weight'] = weight
 
     def get_tile_map_type(self, coordinate):
+        """This function determines at wich directions the specified coordinate has a CLB
+
+        :param coordinate: Desired coordinate
+        :type coordinate: str
+        :raises ValueError: When specified coordinate is invalid
+        :return: Type of the tile map at the specidfied coordinate
+        :rtype: str
+        """
         if coordinate not in self.tiles_map:
             raise ValueError(f'{coordinate}: invalid coordinate!')
 
@@ -387,6 +519,11 @@ class Arch:
             raise ValueError(f'{list(self.tiles_map[coordinate].values())}')
 
     def get_device_dimension(self):
+        """This function returns the Max/Min X/Y coordinates of the dvice
+
+        :return: X/Y coordinates of the device under test
+        :rtype: int
+        """
         device_coords = self.get_coords()
         x_coords = {nd.get_x_coord(coord) for coord in device_coords}
         y_coords = {nd.get_y_coord(coord) for coord in device_coords}
@@ -394,36 +531,35 @@ class Arch:
         return min(x_coords), max(x_coords), min(y_coords), max(y_coords)
 
     def get_coords(self):
+        """This function returns all existing coordinates in the device under test
+
+        :return: Devices' coordinates
+        :rtype: Set[str]
+        """
         return {coord for CR in self.CRs for coord in CR.coords}
 
-    def get_wire_ends(self, wire):
-        tile = nd.get_tile(wire)
-        wires = [w for w in self.wires_dict[tile] if wire in w]
-        wire_ends = [w for w in wires for end in w if end != wire]
+    def get_wire_ends(self, node):
+        """This function returns the other end of a wire connected to the specified node
+
+        :param node: Specified Node 
+        :type node: str
+        :return: Opposite end of the wire
+        :rtype: str
+        """
+        tile = nd.get_tile(node)
+        wires = [w for w in self.wires_dict[tile] if node in w]
+        wire_ends = [w for w in wires for end in w if end != node]
 
         return wire_ends
 
     @staticmethod
     def get_models():
+        """This function lists the existing models in ManAge directory
+
+        :return: List of existing model
+        :rtype: List
+        """
         model_dir = Path(__file__).parent.parent.parent / 'models'
         models = [model.stem.split('_')[-1] for model in model_dir.iterdir()]
 
         return models
-
-
-if __name__ == '__main__':
-    import os
-    t1 = time.time()
-    os.chdir(os.path.abspath('..'))
-    dev = Arch('ZCU9')
-    pips = dev.gen_pips('INT_X46Y90')
-    site_pips = dev.gen_site_pips('CLEM_X46Y90')
-    #dev.set_compressed_graph('INT_X46Y90')
-    #dev.set_pips_length_dict()
-    #util.store_data(cfg.graph_path, 'G_ZCU9_INT_X46Y90.data', dev.G)
-    dev.G = util.load_data(cfg.graph_path, 'G_ZCU9_INT_X46Y90.data')
-    LUTs = dev.get_LUTs()
-    FFs = dev.get_FFs()
-    print(len(LUTs))
-    print(len(FFs))
-    print(time.time() - t1)
