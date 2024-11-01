@@ -7,7 +7,9 @@ from itertools import product
 from typing import List, Set
 from tqdm import tqdm
 from joblib import Parallel, delayed
+
 from xil_res.architecture import Arch
+from xil_res.node import Node as nd
 from xil_res.minimal_config import MinConfig
 from xil_res.clock_domain import ClockDomain, ClockGroup
 import utility.config as cfg
@@ -160,8 +162,7 @@ class TestCollection:
             prev_TC = None
             TC_idx = self.TC_idx
 
-        TC = MinConfig(device, TC_idx, prev_TC)
-        self.TC = TC
+        self.TC = MinConfig(device, TC_idx, prev_TC)
         self.device = device
 
         # reset Clock Groups
@@ -170,13 +171,34 @@ class TestCollection:
 
         # assign virtual source and sink nodes
         for CD in self.clock_domains:
-            CD.assign_source_sink_nodes(TC.G)
+            CD.assign_source_sink_nodes(self.TC.G)
 
-        #TC.CD = {clock_group: clock_group.CD for clock_group in self.clock_groups}
-        TC.CD = self.clock_groups
+        if self.prev_config_files:
+            self.remove_virtual_nodes()
+        else:
+            self.TC.CD = self.clock_groups
 
         # assign pip_v node
-        self.assign_pip_v_node(TC.G)
+        self.assign_pip_v_node(self.TC.G)
+
+    def remove_virtual_nodes(self):
+        for CG in self.TC.CD:
+            if CG.is_free:
+                continue
+
+            # update FFs
+            ff = list(CG.FFs)[0]
+            CG.FFs = set(nd.get_global_group_mates(self.TC.G, ff, CG.name))
+
+        for CG in self.TC.CD:
+            if CG.is_free:
+                continue
+
+            # remove the virtual_src_sink of the clock groups' clock domain from conflicting clock groups' FF nodes
+            CG.remove_virtual_node_from_conflict_FFs(self)
+
+            # remove the virtual_src_sink of other_CDs from the FF nodes of the clock_group
+            CG.remove_other_CDs_virtual_node_from_FFs(self)
 
     def assign_pip_v_node(self, G: nx.DiGraph):
         """This function assigns a virtual node to the head of PIPs
