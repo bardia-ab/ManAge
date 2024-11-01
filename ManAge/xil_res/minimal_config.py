@@ -31,6 +31,8 @@ class MinConfig:
         self.tried_pips             = set()
         self.start_TC_time          = time.time()
         self.get_reconst_blocked_nodes(prev_TC)
+        if len(set(self.filter_subLUTs(usage='used'))) > 1:
+            breakpoint()
         #self.validate()
 
 
@@ -82,7 +84,7 @@ class MinConfig:
             breakpoint()
 
         # 1- set CD
-        self.set_CDs(test_collection, path)
+        self.set_CGs(test_collection, path)
         # 3- specify subluts & update path subluts. it also adds the sublut into LUT
         self.fill_LUTs(path)
         self.fill_FFs(path)
@@ -97,7 +99,7 @@ class MinConfig:
         # 8- block source & sink
         #self.block_LUTs()
         self.block_source_sink(path)
-        #self.test_CD()
+        self.test_CD()
 
     def remove_CUT(self, test_collection):
         cut = self.CUTs[-1]
@@ -110,9 +112,9 @@ class MinConfig:
 
         for path in reversed(cut.paths):
             # 8- restore source & sink **** always before reset_CD
-            self.restore_source_sink(path)
+            #self.restore_source_sink(path)
             # 1- reset CD
-            self.reset_CDs(test_collection, path)
+            self.restore_CGs(test_collection, path)
 
             # 3- remove  sublut from LUT
             self.empty_LUTs(path.subLUTs)
@@ -124,9 +126,10 @@ class MinConfig:
             # 2- unblock path
             self.unblock_path(path, test_collection.device)
 
-        #self.test_CD()
-
+        self.test_CD()
         self.CUTs.remove(cut)
+        if len(set(self.filter_subLUTs(usage='used'))) > 1:
+            breakpoint()
 
     def finalize_CUT(self, test_collection):
         cut = self.CUTs[-1]
@@ -143,6 +146,9 @@ class MinConfig:
         #block global subLUTs and FFs
         if cfg.block_mode == 'global':
             self.block_global_subLUTs(cut.subLUTs)
+            if len(set(self.filter_subLUTs(usage='used'))) > 1:
+                breakpoint()
+
             self.block_global_FFs(cut.FFs)
 
         # block LUTs
@@ -232,6 +238,12 @@ class MinConfig:
     def get_subLUT_bel(self, output, *inputs):
         occupancy = self.get_subLUT_occupancy(output, *inputs)
         LUT_primitive = self.LUTs[nd.get_bel(inputs[0])]
+        free_subLUTs = list(self.filter_subLUTs(tile=LUT_primitive.tile, label=LUT_primitive.label, usage='free'))
+        if len(free_subLUTs) == 0:
+            raise ValueError(f'{LUT_primitive} is already filled!')
+        elif len(free_subLUTs) == 1:
+            return free_subLUTs[0].port[1:]
+
         if occupancy == 2:
             bel = '6LUT'
         else:
@@ -279,19 +291,6 @@ class MinConfig:
         for FF_primitive in path.FFs:
             FF_primitive.block_usage()
 
-    def get_global_subLUTs2(self, *subLUTs):
-        global_subLUTs = set()
-        for subLUT in subLUTs:
-            port = subLUT.port
-            direction = subLUT.direction
-            global_subLUTs.update(self.filter_subLUTs(port=port, direction=direction))
-
-            # In iterations > 1 partially filled LUTs could cause problems
-            LUT_capacity = self.LUTs[subLUT.get_LUT_name()].capacity + subLUT.get_occupancy()
-            global_subLUTs = set(filter(lambda x: self.LUTs[x.get_LUT_name()].capacity >= LUT_capacity, global_subLUTs))
-
-        return global_subLUTs
-
     def get_global_subLUTs(self, *subLUTs):
         global_subLUTs = set()
         for subLUT in subLUTs:
@@ -301,7 +300,7 @@ class MinConfig:
             for lut in global_LUT_primitives:
                 if lut.capacity > 0:
                     try:
-                        global_subLUTs.add(self.subLUTs[lut.get_subLUT_name()])
+                        global_subLUTs.add(self.subLUTs[lut.get_subLUT_name(self, subLUT)])
                         #global_subLUTs = [self.subLUTs[lut.get_subLUT_name()] for lut in global_LUT_primitives if lut.capacity > 0]
                     except:
                         breakpoint()
@@ -335,14 +334,22 @@ class MinConfig:
 
     def reset_global_subLUTs(self, subLUTs):
         for subLUT in subLUTs:
-            global_subLUTs = self.get_global_subLUTs(subLUT)
+            #global_subLUTs = self.get_global_subLUTs(subLUT)
+            attr_dict = {'direction': subLUT.direction, 'label': subLUT.label, 'usage': 'used'}
+            global_subLUTs = set(self.filter_subLUTs(**attr_dict))
             global_subLUTs = {sublut for sublut in global_subLUTs if sublut.name != subLUT.name}
             #Parallel(n_jobs=-1, require='sharedmem')(delayed(global_subLUT.global_reset)(self) for global_subLUT in global_subLUTs)
             for global_subLUT in global_subLUTs:
-                global_subLUT.global_reset(self)
+                global_subLUT.remove_from_LUT(self)
+                global_subLUT.empty()
 
     def block_global_subLUTs(self, subLUTs):
-        global_subLUTs = self.get_global_subLUTs(*subLUTs)
+        #global_subLUTs = self.get_global_subLUTs(*subLUTs)
+        global_subLUTs = set()
+        for subLUT in subLUTs:
+            attr_dict = {'direction': subLUT.direction, 'label': subLUT.label, 'func': subLUT.func, 'usage': 'used'}
+            global_subLUTs.update(self.filter_subLUTs(**attr_dict))
+
         #Parallel(n_jobs=-1, require='sharedmem')(delayed(global_subLUT.block_usage)() for global_subLUT in global_subLUTs)
         for global_subLUT in global_subLUTs:
             global_subLUT.block_usage()
@@ -377,7 +384,7 @@ class MinConfig:
             LUT_inputs = {nd.get_LUT_input(tile, label, idx) for idx in range(1, 6)}
             self.blocked_nodes.update(LUT_inputs)
 
-    def unblock_LUTs(self, device):
+    def unblock_LUTs(self):
         freed_LUTs = self.filter_LUTs(has_freed=True)
         edges = set()
         for freed_LUT in freed_LUTs:
@@ -448,7 +455,7 @@ class MinConfig:
         self.blocked_nodes -= nodes
 
         if any(map(lambda node: nd.get_clb_node_type(node) == 'LUT_in', path)):
-            self.unblock_LUTs(device)
+            self.unblock_LUTs()
 
     def block_source_sink(self, path):
         if path.type == 'path_not':
@@ -544,6 +551,13 @@ class MinConfig:
             if edge[1] in self.blocked_nodes:
                 continue
 
+            # skip FF_outs with occupied LUTs in front
+            if nd.get_clb_node_type(edge[1]) == 'FF_out':
+                LUT_name = re.sub('FF2*$', 'LUT', nd.get_bel(edge[1]))
+                if LUT_name in self.LUTs:
+                    if self.LUTs[LUT_name].capacity == 0:
+                        continue
+
             if weight is None:
                 try:
                     weight = device.G.get_edge_data(*edge)['weight']
@@ -552,15 +566,15 @@ class MinConfig:
 
             self.G.add_edge(*edge, weight=weight)
 
-    ########## CD ####################
-    def set_CDs(self, test_collection, path):
+    ########## CG & CD ####################
+    def set_CGs(self, test_collection, path):
         ff_nodes = {node for node in path if nd.get_primitive(node) == 'FF'}
         for ff_node in ff_nodes:
-            clock_group = nd.get_clock_group(ff_node)
-            CG = test_collection.get_clock_group(clock_group)
+            clock_group_name = nd.get_clock_group(ff_node)
+            CG = next(clock_group for clock_group in self.CD if clock_group.name == clock_group_name)
             CG.set(ff_node, test_collection)
 
-    def reset_CDs(self, test_collection, path):
+    def restore_CGs(self, test_collection, path):
         #restored_CGs = [CG for CG in self.CD if path.prev_CD[CG].name == 'None' and path.prev_CD[CG] != self.CD[CG]]
         restore_CGs = ClockGroup.get_changed_CGs(self.CD, path.prev_CD)
         for CG in restore_CGs:
@@ -581,9 +595,9 @@ class MinConfig:
         sinks = self.G.predecessors(cfg.virtual_sink_node)
         source_clock_groups = {nd.get_clock_group(node) for node in sources}
         sink_clock_groups = {nd.get_clock_group(node) for node in sinks}
-        TC_source_groups = {CG.name for CG in self.CD if CG.CD != ClockDomain() and CG.CD.type == 'source'}
-        TC_sink_groups = {CG.name for CG in self.CD if CG.CD != ClockDomain() and CG.CD.type == 'sink'}
-        TC_unset_groups = {CG.name for CG in self.CD if CG.CD == ClockDomain()}
+        TC_source_groups = {CG.name for CG in self.CD if not CG.is_free and CG.CD.type == 'source'}
+        TC_sink_groups = {CG.name for CG in self.CD if not CG.is_free  and CG.CD.type == 'sink'}
+        TC_unset_groups = {CG.name for CG in self.CD if CG.is_free}
         if source_clock_groups - TC_unset_groups - TC_source_groups:
             breakpoint()
             raise ValueError(f'invalid source clock group: {source_clock_groups - TC_unset_groups - TC_source_groups}')
@@ -592,8 +606,7 @@ class MinConfig:
             breakpoint()
             raise ValueError(f'invalid sink clock group: {sink_clock_groups - TC_unset_groups - TC_sink_groups}')
 
-
-        ########## Routing ###############
+    ########## Misc ####################
     def pick_pip(self, test_collection):
         device = test_collection.device
         pips = test_collection.queue
@@ -620,54 +633,6 @@ class MinConfig:
         self.CUTs[-1].main_path = MainPath(self, path_in, path_out, pip)
 
         return pip
-
-    def pick_pip2(self, test_collection):
-        cut = test_collection.TC.CUTs[-1]
-        device = test_collection.device
-        pips = test_collection.queue
-        weights = {}
-
-        while (True):
-            path_out = PathOut()
-            path_out.route(self, pips, first_order=True)
-            if path_out.error:
-                return None
-
-            # save weights
-            for edge in path_out.get_edges():
-                if edge not in weights:
-                    weights[edge] = self.G.get_edge_data(*edge)['weight']
-
-            sink = path_out[0]
-            path_in = PathIn(sink)
-            path_in.route(self, pips, path_out)
-            if path_in.error:
-                if len(cut.paths) < (cfg.max_path_length // 4):
-                    self.inc_cost(test_collection, path_out, 0.5, 0.5)
-                    continue
-            else:
-                # remove cfg.pip_v from path[0], so that pip will change in next try
-                self.G.remove_edge(cfg.pip_v, path_out[0])
-
-                #recover weights
-                for edge in weights:
-                    self.G.get_edge_data(*edge)['weight'] = weights[edge]
-
-                return None
-
-            path_in.nodes.pop()
-
-            # create the main_path
-            pip = PIP((path_in[-1], path_out[0]), device.G)
-            self.CUTs[-1].G.add_edge(path_in[-1], path_out[0])
-            self.CUTs[-1].main_path = MainPath(self, path_in, path_out, pip)
-            self.G.remove_edge(cfg.pip_v, path_out[0])
-
-            # recover weights
-            for edge in weights:
-                self.G.get_edge_data(*edge)['weight'] = weights[edge]
-
-            return pip
 
     def validate_main_path_length(self, test_collection):
         device = test_collection.device
