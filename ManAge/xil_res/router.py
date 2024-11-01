@@ -2,9 +2,6 @@ import re, sys
 from heapq import heappush, heappop
 from itertools import count
 import networkx as nx
-sys.path.insert(0, r'../utility')
-import utility.config as cfg
-
 
 def path_finder(G, source, target, weight="weight", conflict_free=True, delimiter='/', dummy_nodes=[], blocked_nodes=set()):
     if {source, target} & blocked_nodes:
@@ -134,58 +131,6 @@ def weight_function(G, weight):
     if G.is_multigraph():
         return lambda u, v, d: min(attr.get(weight, 1) for attr in d.values())
     return lambda u, v, data: data.get(weight, 1)
-
-'''
-def extract_path(flow_dict, source, sink):
-    """
-    Extract a single path based on positive flow from source to sink.
-    Assumes flow_dict is a dict of dicts containing residual flow values.
-    """
-    path, stack = [], [source]
-    while stack:
-        u = stack[-1]
-        if u == sink:  # Path completed
-            return path + [sink]
-        for v in flow_dict[u]:
-            if flow_dict[u][v] > 0:  # Positive flow means a path exists
-                flow_dict[u][v] -= 1  # Use this path, so decrement the flow
-                stack.append(v)
-                path.append(u)
-                break
-        else:  # Backtrack if no forward edge is found
-            stack.pop()
-            if path:
-                path.pop()
-    return []
-
-def find_disjoint_paths(G, source_sink_pairs):
-    # Ensure G is a copy if you don't want it modified
-    G = G.copy()
-    # Adding a small capacity to all edges to transform the problem into max flow
-    for u, v in G.edges():
-        G.edges[u, v]['capacity'] = 1  # Ensure graph G has 'capacity' for all edges
-
-    all_paths = []
-    for source, sink in source_sink_pairs:
-        # Calculate maximum flow
-        flow_value, flow_dict = nx.maximum_flow(G, source, sink)
-        if flow_value == 0:
-            break  # No path exists
-        # Extract path from the flow dict
-        path = extract_path(flow_dict, source, sink)
-        all_paths.append(path)
-        # Remove used edges from G to ensure paths are node-disjoint
-        for i in range(len(path) - 1):
-            G.remove_edge(path[i], path[i + 1])
-
-    if len(all_paths) == len(source_sink_pairs):
-        print("Node-disjoint paths for all pairs were found.")
-
-    else:
-        print("It was not possible to find node-disjoint paths for all pairs.")
-
-    return all_paths
-'''
 
 def extract_node_disjoint_paths(G, source_sink_pairs):
     # Create a directed copy of the original graph
