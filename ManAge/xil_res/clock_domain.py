@@ -49,7 +49,7 @@ class ClockDomain:
         result = True if self.name == 'None' else False
         return result
 
-    def assign_source_sink_nodes(self, G: nx.DiGraph()):
+    def assign_source_sink_nodes(self, G: nx.DiGraph):
         """Connect virtual source or sink nodes to the FFs of the clock domain depending on the type
 
         :param G: The architecture graph
@@ -93,7 +93,7 @@ class ClockGroup:
         self._CD        = ClockDomain()
 
     def __repr__(self):
-        return f'ClockGroup(name={self.name})'
+        return f'ClockGroup(name={self.name}: {self.CD})'
 
     def __eq__(self, other):
         return type(self) == type(other) and self.name == other.name
@@ -128,7 +128,7 @@ class ClockGroup:
         :return: FF nodes of the conflicting clock groups
         :rtype: Set[str]
         """
-        return {node for conf_CG in self.conflict for node in test_collection.get_clock_group(conf_CG).FFs}
+        return {node for conflict_CG in self.conflict for node in test_collection.get_clock_group(conflict_CG).FFs}
 
     def clear(self):
         """This function clears FFs and disassociate the clock domain
@@ -137,17 +137,18 @@ class ClockGroup:
         self._CD = ClockDomain()
 
     def restore(self, test_collection):
-        # restore the virtual_src_sink of the clock groups' clock domain to conflicting clock groups' FF nodes
-        self.restore_virtual_node_to_conf_FFs(test_collection)
-
         # restore the virtual_src_sink of other_CDs to the FF nodes of the clock_group
         self.restore_other_CDs_virtual_node_to_FFs(test_collection)
 
         # empty FFs
         self.FFs = set()
-        for conf_CG in self.conflict:
-            conf_CG = test_collection.get_clock_group(conf_CG)
-            conf_CG.FFs = set()
+        for conflict_CG in self.conflict:
+            conflict_CG = test_collection.get_clock_group(conflict_CG)
+            if conflict_CG.is_free:
+                # restore the virtual_src_sink of the clock groups' clock domain to conflicting clock groups' FF nodes
+                self.restore_virtual_node_to_conflict_FFs(test_collection)
+
+                conflict_CG.FFs = set()
 
         # disassociate the clock domain
         self._CD         = ClockDomain()
@@ -174,18 +175,18 @@ class ClockGroup:
 
         # add FFs
         self.FFs.update(group_mates)
-        self.update_conf_FFs(test_collection)
+        self.update_conflict_FFs(test_collection)
 
         # set clock domain
         self.CD = clock_domain
 
         # remove the virtual_src_sink of the clock groups' clock domain from conflicting clock groups' FF nodes
-        self.remove_virtual_node_from_conf_FFs(test_collection)
+        self.remove_virtual_node_from_conflict_FFs(test_collection)
 
         # remove the virtual_src_sink of other_CDs from the FF nodes of the clock_group
         self.remove_other_CDs_virtual_node_from_FFs(test_collection)
 
-    def remove_virtual_node_from_conf_FFs(self, test_collection):
+    def remove_virtual_node_from_conflict_FFs(self, test_collection):
         """This function removes the edges between the source/sink node of the clock domain assigned to this clock group and FF nodes within the conflicting clock groups
 
         :param test_collection: Test collection
@@ -197,9 +198,9 @@ class ClockGroup:
         test_collection.TC.G.remove_edges_from(edges)
 
         # block nodes
-        test_collection.TC.blocked_nodes.update(switched_conflicting_FF_nodes)
+        #test_collection.TC.blocked_nodes.update(switched_conflicting_FF_nodes)
 
-    def restore_virtual_node_to_conf_FFs(self, test_collection):
+    def restore_virtual_node_to_conflict_FFs(self, test_collection):
         """This function restores the edges between the source/sink node of the clock domain assigned to this clock group and FF nodes within the conflicting clock groups
 
         :param TC: Minimal test configuration
@@ -210,7 +211,7 @@ class ClockGroup:
         edges = self.CD.get_virtual_edges(*switched_conflicting_FF_nodes)
 
         # unblock nodes
-        test_collection.TC.blocked_nodes -= switched_conflicting_FF_nodes
+        #test_collection.TC.blocked_nodes -= switched_conflicting_FF_nodes
 
         test_collection.TC.add_edges(*edges, weight=0)
         #test_collection.TC.G.add_edges_from(edges, weight=0)
@@ -231,7 +232,7 @@ class ClockGroup:
         G.remove_edges_from(edges)
 
         # block nodes
-        test_collection.TC.blocked_nodes.update(switched_FF_nodes)
+        #test_collection.TC.blocked_nodes.update(switched_FF_nodes)
 
     def restore_other_CDs_virtual_node_to_FFs(self, test_collection):
         """This function rstores the edges between source/sink nodes of other clock domains and FF nodes within the clock group
@@ -247,12 +248,12 @@ class ClockGroup:
             edges.update(other_CD.get_virtual_edges(*switched_FF_nodes))
 
         # unblock nodes
-        test_collection.TC.blocked_nodes -= switched_FF_nodes
+        #test_collection.TC.blocked_nodes -= switched_FF_nodes
 
         TC.add_edges(*edges, weight=0)
         #TC.G.add_edges_from(edges, weight=0)
 
-    def update_conf_FFs(self, test_collection):
+    def update_conflict_FFs(self, test_collection):
         """This function updates the FF nodes of the conflicting clock groups
 
         :param test_collection: Test collection
@@ -260,11 +261,10 @@ class ClockGroup:
         """
         G = test_collection.TC.G
         clb_node_type = nd.get_clb_node_type(list(self.FFs)[0])
-        for conf_CG in self.conflict:
-            conf_CG = test_collection.get_clock_group(conf_CG)
-            conf_clb_node_type = 'FF_out' if clb_node_type == 'FF_in' else 'FF_in'
-            conf_CG.FFs.update(node for node in G if nd.get_clock_group(node) == conf_CG.name and
-             nd.get_clb_node_type(node) == conf_clb_node_type)
+        for conflict_CG in self.conflict:
+            conflict_CG = test_collection.get_clock_group(conflict_CG)
+            conflict_clb_node_type = 'FF_out' if clb_node_type == 'FF_in' else 'FF_in'
+            conflict_CG.FFs.update(nd.get_global_group_mates(G, conflict_clb_node_type, conflict_CG))
 
     @property
     def CD(self):
