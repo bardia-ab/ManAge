@@ -11,6 +11,8 @@ import utility.config as cfg
 
 @dataclass
 class RLOC_Collection:
+    """This class provides required attributes and methods for performing the relocation process.
+    """
     device              :   Arch
     origin              :   str
     minimal_config_dir  :   str
@@ -57,25 +59,28 @@ class RLOC_Collection:
         # Restore instance attributes (temp_value will be missing)
         self.__dict__.update(state)
 
-    def create_LUTs(self):
-        return {lut.name: lut for lut in self.device.get_LUTs()}
-
-    def create_FFs(self):
-        return {ff.name: ff for ff in self.device.get_FFs()}
-
-    def create_subLUTs(self):
-        return {sublut.name: sublut for sublut in self.device.get_subLUTs()}
-
-
-
     def create_pbar(self, length):
+        """This function creates a progrss bar for the relocation process
+
+        :param length: Number of configurations
+        :type length: int
+        """
         self.pbar = tqdm(total=length)
 
     def update_pbar(self):
+        """This function updates the progress bar and test configurations' indices
+        """
         self.pbar.update(1)
         self.TC_idx += 1
 
     def create_TC(self, file_name):
+        """This function creates a test configuration
+
+        :param file_name: Name of the test configuration
+        :type file_name: str
+        :return: Created test configuration
+        :rtype: Config
+        """
         if self.prev_config_dir is None:
             TC = Config()
 
@@ -90,6 +95,11 @@ class RLOC_Collection:
         return TC
 
     def fill_TC(self, file):
+        """This function populates test configurations with relocated CUTs
+
+        :param file: The path to the minimal test configuration file
+        :type file: pathlib.Path
+        """
         minimal_TC = util.load_data(str(file.parent), file.name)
         TC = self.create_TC(file.name)
         TC.fill_D_CUTs(self, minimal_TC)
@@ -97,6 +107,11 @@ class RLOC_Collection:
         self.update_pbar()
 
     def update_coverage(self, edges):
+        """This function updates the edges covered by CUTs and store the results in the covered_pips dictionary
+
+        :param edges: Covered edges of the architecture graph
+        :type edges: Set[Tuple[str, str]]
+        """
         pips = filter(lambda e: nd.get_tile(e[0]) == nd.get_tile(e[1]), edges)
         for pip in pips:
             key = nd.get_tile(pip[0])
@@ -104,6 +119,11 @@ class RLOC_Collection:
             util.extend_dict(self.covered_pips, key, value, value_type='set')
 
     def get_pips_length_dict(self):
+        """This function creates a dictionary showing how many PIPs must be covered at each INT tile
+
+        :return: A dictionary with INT tiles as keys and the number of PIPs to be covered as values 
+        :rtype: dict
+        """
         uncovered_pips_length = {}
         coordinates = self.device.get_coords()
         for coordinate in coordinates:
@@ -114,6 +134,11 @@ class RLOC_Collection:
         return uncovered_pips_length
 
     def get_coverage(self):
+        """This function claculates the covereage and report it in percent
+
+        :return: Coverage   
+        :rtype: str
+        """
         total_pips = sum(self.get_pips_length_dict().values())
         covered_pips = sum(len(v) for k, v in self.covered_pips.items() if k.startswith(cfg.INT_label) and nd.get_coordinate(k)
                            in self.device.get_coords())
@@ -121,6 +146,8 @@ class RLOC_Collection:
         return f'Coverage: {covered_pips / total_pips:.2%}'
 
     def copy_missing_conf_files(self):
+        """This function copies the missing configuration files from the previous iteration directory to the current iteration directory
+        """
         if self.prev_config_dir is not None:
             missing_files = set(os.listdir(self.prev_config_dir)) - set(os.listdir(self.config_dir))
             for file in missing_files:

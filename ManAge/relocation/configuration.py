@@ -1,17 +1,11 @@
-import copy
-import os, re
 from dataclasses import dataclass, field
-from typing import List, Set, Any
-from joblib import Parallel, delayed
+from typing import List, Set
 import utility.utility_functions as util
 import utility.config as cfg
 from xil_res.node import Node as nd
 from xil_res.cut import CUT
-from relocation.rloc import RLOC as rl
 from relocation.cut import D_CUT
 from xil_res.primitive import LUT
-from functools import partial
-import concurrent.futures
 
 @dataclass
 class Config:
@@ -24,30 +18,79 @@ class Config:
 
 
     def filter_LUTs(self, **attributes):
+        """This function filters the existing LUTs in the configuration according to the specified attributes
+
+        :return: Filtered LUT objects
+        :rtype: types.GeneratorType
+        """
         return (LUT_obj for LUT_obj in self.LUTs.values() if all(getattr(LUT_obj, attr) == value for attr, value in attributes.items()))
 
     def filter_subLUTs(self, **attributes):
+        """This function filters the existing subLUTs in the configuration according to the specified attributes
+
+        :return: Filtered subLUT objects
+        :rtype: types.GeneratorType
+        """
         return (subLUT_obj for subLUT_obj in self.subLUTs.values() if all(getattr(subLUT_obj, attr) == value for attr, value in attributes.items()))
 
     def filter_FFs(self, **attributes):
+        """This function filters the existing FFs in the configuration according to the specified attributes
+
+        :return: Filtered FF objects
+        :rtype: types.GeneratorType
+        """
         return (FF_obj for FF_obj in self.FFs.values() if all(getattr(FF_obj, attr) == value for attr, value in attributes.items()))
 
     @staticmethod
     def create_LUTs(device):
+        """This function creates LUT objects for the configuration
+
+        :param device: Device under test
+        :type device: Arch
+        :return: LUT objects
+        :rtype: Set[LUT]
+        """
         return {lut.name: lut for lut in device.get_LUTs()}
 
     @staticmethod
     def create_FFs(device):
+        """This function creates FF objects for the configuration
+
+        :param device: Device under test
+        :type device: Arch
+        :return: FF objects
+        :rtype: Set[FF]
+        """
         return {ff.name: ff for ff in device.get_FFs()}
 
     @staticmethod
     def create_subLUTs(device):
+        """This function creates subLUT objects for the configuration
+
+        :param device: Device under test
+        :type device: Arch
+        :return: subLUT objects
+        :rtype: Set[SubLUT]
+        """
         return {sublut.name: sublut for sublut in device.get_subLUTs()}
 
     def get_subLUT_bel(self, output, *inputs):
+        """This function determines the BEL of a subLUT based on its inputs and output
+
+        :param output: Output node
+        :type output: str|None
+        :raises ValueError: When the respective LUT of the subLUT is already fully occupied
+        :return: BEL of the subLUT
+        :rtype: str
+        """
         occupancy = self.get_subLUT_occupancy(output, *inputs)
-        #LUT_primitive = next(self.filter_LUTs(name=nd.get_bel(inputs[0])))
         LUT_primitive = self.LUTs[nd.get_bel(inputs[0])]
+        free_subLUTs = list(self.filter_subLUTs(tile=LUT_primitive.tile, label=LUT_primitive.label, usage='free'))
+        if len(free_subLUTs) == 0:
+            raise ValueError(f'{LUT_primitive} is already filled!')
+        elif len(free_subLUTs) == 1:
+            return free_subLUTs[0].port[1:]
+
         if occupancy == 2:
             bel = '6LUT'
         else:
@@ -59,6 +102,13 @@ class Config:
         return bel
 
     def get_subLUT_occupancy(self, output, *inputs):
+        """This function calculates the occupancy of a subLUT based on its inputs and output
+
+        :param output: Output node
+        :type output: str|None
+        :return: Occupancy of the subLUT
+        :rtype: int
+        """
         cond_single_mode = not cfg.LUT_Dual
         cond_i6 = any(map(lambda x: nd.get_bel_index(x) == 6, inputs))
         cond_muxed_out = (output is not None) and (nd.get_clb_node_type(output) == 'CLB_muxed')
@@ -66,65 +116,26 @@ class Config:
 
         return occupancy
 
-    '''def get_global_subLUTs(self, *subLUTs):
-        global_subLUTs = set()
-        for subLUT in subLUTs:
-            port = subLUT.port
-            direction = subLUT.direction
-            global_subLUTs.update(self.filter_subLUTs(port=port, direction=direction))
-
-        return global_subLUTs
-
-    def get_global_FFs(self, *FFs):
-        global_FFs = set()
-        for ff in FFs:
-            direction = ff.direction
-            global_FFs.update(self.filter_FFs(port=ff.port, direction=direction))
-
-        return global_FFs
-
-    def set_global_FFs(self, test_collection, FFs):
-        tiles_map = test_collection.device.tiles_map
-        for ff in FFs:
-            global_FFs = self.get_global_FFs(ff)
-            global_FFs = {global_FF for global_FF in global_FFs if global_FF.name != ff.name}
-            Parallel(n_jobs=-1, require='sharedmem')(delayed(global_FF.global_set)(tiles_map, ff) for global_FF in global_FFs)
-
-    def set_global_subLUTs(self, test_collection, subLUTs):
-        tiles_map = test_collection.device.tiles_map
-        for subLUT in subLUTs:
-            global_subLUTs = self.get_global_subLUTs(subLUT)
-            global_subLUTs = {sublut for sublut in global_subLUTs if sublut.name != subLUT.name}
-            Parallel(n_jobs=-1, require='sharedmem')(delayed(global_subLUT.global_set)(tiles_map, subLUT) for global_subLUT in global_subLUTs)
-            Parallel(n_jobs=-1, require='sharedmem')(
-                delayed(global_subLUT.add_to_LUT)(self) for global_subLUT in global_subLUTs)'''
-
-    def get_valid_origins(self, rloc_collection, cut: CUT):
-        tiles_map = rloc_collection.device.tiles_map
-        wires_dict = rloc_collection.device.wires_dict
-        nodes = cut.G
-        edges = cut.G.edges
-        origin = cut.origin
-        cut_x, cut_y = nd.get_x_coord(origin), nd.get_y_coord(origin)
-
-        INT_tiles = filter(lambda tile: nd.get_tile_type(tile) == cfg.INT_label, wires_dict)
-        valid_INT_tiles = filter(lambda tile: rl.check_tile_compliance(tiles_map, nodes, origin, tile) and
-                                 rl.check_wire_compliance(tiles_map, wires_dict, edges, origin, tile), INT_tiles)
-
-        valid_coords = map(lambda tile: nd.get_coordinate(tile), valid_INT_tiles)
-        valid_coords = sorted(valid_coords, key=lambda x: (abs(nd.get_x_coord(x) - cut_x), abs(nd.get_y_coord(x) - cut_y)))
-
-        # remove the cut's origin
-        valid_coords.pop(0)
-
-        return valid_coords
-
     def check_collision(self, cut: D_CUT):
+        """This function checks if there is no collision between the specified CUT's nodes and already found paths in the configuration
+
+        :param cut: Relocated CUT
+        :type cut: D_CUT
+        :return: True|False
+        :rtype: bool
+        """
         return all(map(lambda node: nd.get_tile(node) not in self.used_nodes or
                                     (nd.get_tile(node) in self.used_nodes and
                                     nd.get_port(node) not in self.used_nodes[nd.get_tile(node)]), cut.G))
 
     def check_LUT_util(self, cut: D_CUT):
+        """This function verifies that LUTs used by the specified CUT will not be over-utilized
+
+        :param cut: Relocated CUT
+        :type cut: D_CUT
+        :return: True|False
+        :rtype: bool
+        """
         LUT_cap = {subLUT.get_LUT_name(): self.LUTs[subLUT.get_LUT_name()].capacity if subLUT.get_LUT_name() in self.LUTs else cfg.LUT_Capacity for subLUT in cut.subLUTs}
         for subLUT in cut.subLUTs:
             LUT_cap[subLUT.get_LUT_name()] -= subLUT.get_occupancy()
@@ -132,9 +143,23 @@ class Config:
         return all(map(lambda cap: cap >= 0, LUT_cap.values()))
 
     def check_FF_util(self, cut: D_CUT):
+        """This function checks if only one node of FFs is utilized
+
+        :param cut: Relocated CUT
+        :type cut: D_CUT
+        :return: True|False
+        :rtype: bool
+        """
         return all(map(lambda ff: ff.name not in self.FFs, cut.FFs))
 
     def fill_D_CUTs(self, rloc_collection, minimal_TC):
+        """This function relocates a minimal test configuration's CUTs and add them to the configuration
+
+        :param rloc_collection: Relocation Collection
+        :type rloc_collection: RLOC_Collection
+        :param minimal_TC: Minimal test configuration
+        :type minimal_TC: MinConfig
+        """
         tiles_map = rloc_collection.device.tiles_map
         wires_dict = rloc_collection.device.wires_dict
         device = rloc_collection.device
@@ -143,11 +168,10 @@ class Config:
 
         # first add CUTs
         for cut in CUTs:
-            #minimal_wires_dict = self.get_minimal_wires_dict(minimal_TC, tiles_map, wires_dict, rloc_collection.origin, cut.origin)
             try:
                 d_cut = D_CUT(cut.origin, tiles_map, wires_dict, cut, iteration)
             except ValueError:
-                breakpoint()
+                raise Exception(f'{cut}: The reference CUT is invalid!')
 
             self.add_D_CUT(rloc_collection, d_cut)
 
@@ -166,24 +190,35 @@ class Config:
                     self.add_D_CUT(rloc_collection, d_cut)
 
     def d_cut_generator(self, origins, tiles_map, wires_dict, cut, iteration=None):
+        """This function generates a new CUT for the specified origins
+
+        :param origins: Target origins to where the specified CUT must be relocated
+        :type origins: [Any, Any, None]
+        :param tiles_map: Tiles map of the device under test
+        :type tiles_map: dict
+        :param wires_dict: Wires dictionary of the device under test
+        :type wires_dict: dict
+        :param cut: Original CUT from the minimal test configuration
+        :type cut: CUT
+        :param iteration: Iteration of path search process, defaults to None
+        :type iteration: int, optional
+        :yield: Relocated CUT
+        :rtype: Iterable[_T]
+        """
         for origin in origins:
-            #minimal_wires_dict = self.get_minimal_wires_dict(minimal_TC, tiles_map, wires_dict, cut.origin, origin)
             try:
                 yield D_CUT(origin, tiles_map, wires_dict, cut, iteration=iteration)
             except ValueError:
                 continue
 
-    def get_valid_D_CUTs(self, rloc_collection, cut: CUT):
-        tiles_map = rloc_collection.device.tiles_map
-        valid_coords = self.get_valid_origins(rloc_collection, cut)
-        #with concurrent.futures.ThreadPoolExecutor() as executor:
-            #D_CUTs = list(executor.map(partial(D_CUT, rloc_collection=rloc_collection, cut=cut), valid_coords))
-
-        D_CUTs = (D_CUT(origin, tiles_map, cut, iteration=rloc_collection.iteration) for origin in valid_coords)
-
-        return D_CUTs
-
     def fill_nodes(self, rloc_collection, cut:D_CUT | CUT):
+        """This function updates the utilized nodes of the configuration and the coverage of the whole process
+
+        :param rloc_collection: Relocation collection
+        :type rloc_collection: RLOC_Collection
+        :param cut: Relocated CUT
+        :type cut: D_CUT | CUT
+        """
         for node in cut.G:
             util.extend_dict(self.used_nodes, nd.get_tile(node), nd.get_port(node), value_type='set')
 
@@ -191,6 +226,11 @@ class Config:
         rloc_collection.update_coverage(cut.main_path.get_edges())
 
     def fill_LUTs(self, cut: D_CUT | CUT):
+        """This function fills the LUTs of the configuration with the specified CUT based on the utilized subLUTs
+
+        :param cut: Relocated CUT
+        :type cut: D_CUT | CUT
+        """
         for subLUT in cut.subLUTs:
             LUT_name = subLUT.get_LUT_name()
             if LUT_name not in self.LUTs:
@@ -199,10 +239,22 @@ class Config:
             subLUT.add_to_LUT(self)
 
     def fill_FFs(self, cut: D_CUT | CUT):
+        """This function fills the FFs of the configuration based on the utilized FFs by the specified CUT
+
+        :param cut: Relocated CUT
+        :type cut: D_CUT | CUT
+        """
         for FF_primitive in cut.FFs:
             self.FFs[FF_primitive.name] = FF_primitive
 
     def add_D_CUT(self, rloc_collection, d_cut: D_CUT):
+        """This function adds the specified relocated CUT to the configuration
+
+        :param rloc_collection: Relocation collection
+        :type rloc_collection: RLOC_Collection
+        :param d_cut: Relocated CUT
+        :type d_cut: D_CUT
+        """
         self.D_CUTs.append(d_cut)
         self.fill_nodes(rloc_collection, d_cut)
         self.fill_LUTs(d_cut)

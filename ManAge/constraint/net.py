@@ -25,6 +25,13 @@ class Net:
 
     @staticmethod
     def RRG(G):
+        """This function generates the Routing Resources Graph (RRG) of the architecture graph containing only Nodes and PIPs
+
+        :param G: Architecture graph
+        :type G: nx.DiGraph
+        :return: RRG
+        :rtype: nx.DiGraph
+        """
         RRG = nx.DiGraph()
         RRG.add_edges_from(G.edges())
         wires_end = {edge[1] for edge in G.edges if nd.get_tile(edge[0]) != nd.get_tile(edge[1])}
@@ -36,6 +43,13 @@ class Net:
         return RRG
 
     def get_constraint(self, G):
+        """This function returns the routing constraint of a net
+
+        :param G: Netlist
+        :type G: nx.DiGraph
+        :return: Routing constraint
+        :rtype: str
+        """
         G = Net.RRG(G)
         constraint = f'set_property FIXED_ROUTE {{{self.get_netlist_routing_const(G)}}} [get_nets {self.name}]\n'
 
@@ -43,6 +57,13 @@ class Net:
 
     @staticmethod
     def get_netlist_routing_const(G):
+        """This function generates the directed routing string of a net
+
+        :param G: Netlist
+        :type G: nx.DiGraph
+        :return: Directed routing string
+        :rtype: str
+        """
         route = []
         trunk = Net.get_trunk(G)
         for node in trunk:
@@ -61,6 +82,13 @@ class Net:
 
     @staticmethod
     def get_trunk(G: nx.DiGraph):
+        """This function extracts the trunk of a tree
+
+        :param G: Netlist
+        :type G: nx.DiGraph
+        :return: Tree's trunck
+        :rtype: List[str]
+        """
         source = [node for node in G if G.in_degree(node) == 0].pop()
         sinks = [node for node in G if G.out_degree(node) == 0]
         for sink in sinks:
@@ -75,6 +103,14 @@ class Net:
 
     @staticmethod
     def get_g_buffer(G):
+        """This function determines the type of route-thru in the specified CUT's graph 
+
+        :param G: CUT's graph
+        :type G: nx.DiGraph
+        :raises ValueError: When a LUT input is shared between two different paths
+        :return: Type of the route-thru
+        :rtype: str
+        """
         route_thrus = list(filter(lambda e: cfg.LUT_in_pattern.match(e[0]), G.edges))
         route_thru_cond = any(filter(lambda e: not cfg.LUT_in6_pattern.match(e[0]) and cfg.CLB_out_pattern.match(e[1]), route_thrus))
         if not route_thru_cond:
@@ -114,6 +150,15 @@ class Net:
     
     @staticmethod
     def get_subgraphs(G, g_buffer):
+        """This function splits the graph of a CUT including route-thrus into two subgraphs
+
+        :param G: CUT's graph
+        :type G: nx.DiGraph
+        :param g_buffer: Type of the route-thru
+        :type g_buffer: str
+        :return: subgraphs
+        :rtype: nx.DiGraph
+        """
         try:
             buffer_in = next(filter(lambda node: cfg.LUT_in_pattern.match(node) and G.out_degree(node) != 0, G))
         except StopIteration:
@@ -161,6 +206,17 @@ class Net:
 
     @staticmethod
     def parse_routing_string(routing_string):
+        """This function converts a directed routing string to a graph
+
+        :param routing_string: Directed routing string
+        :type routing_string: str   
+        :return: Graph
+        :rtype: nx.DiGraph
+
+        .. code block:: python
+        directed_routing_string = "{ CLE_CLE_L_SITE_0_DQ2 INT_NODE_SDQ_41_INT_OUT0 INT_INT_SDQ_75_INT_OUT0 INT_NODE_GLOBAL_9_INT_OUT1 INT_NODE_IMUX_27_INT_OUT1  { BYPASS_E14  { INT_NODE_IMUX_17_INT_OUT0  { BYPASS_E12  { INT_NODE_IMUX_13_INT_OUT1 BYPASS_E6 INT_NODE_IMUX_1_INT_OUT1 IMUX_E1 }  INT_NODE_IMUX_14_INT_OUT0 IMUX_E37 }  IMUX_E39 }  INT_NODE_IMUX_17_INT_OUT1  { IMUX_E33 }  BYPASS_E9 INT_NODE_IMUX_24_INT_OUT0  { IMUX_E15 }  IMUX_E47 }  IMUX_E13 }"
+        G = Net.parse_routing_string(directed_routing_string)
+        """
         tokens = routing_string.split()
         dct = {}
         last_node = None
@@ -175,6 +231,15 @@ class Net:
 
     @staticmethod
     def get_graph(dct, tokens, last_node):
+        """This function creates a dictionary in which each key is a node and the values are the neighboring nodes 
+
+        :param dct: A dictionary for storing the results
+        :type dct: dict
+        :param tokens: Nodes in a directed routing string
+        :type tokens: List[str]
+        :param last_node: Previous node
+        :type last_node: str|None
+        """
         while tokens:
             token = tokens.pop(0)
             if token == '}':
@@ -189,8 +254,3 @@ class Net:
                     util.extend_dict(dct, last_node, token)
 
                 last_node = token
-
-if __name__ == '__main__':
-    routing_string = "{ CLE_CLE_L_SITE_0_DQ2 INT_NODE_SDQ_41_INT_OUT0 INT_INT_SDQ_75_INT_OUT0 INT_NODE_GLOBAL_9_INT_OUT1 INT_NODE_IMUX_27_INT_OUT1  { BYPASS_E14  { INT_NODE_IMUX_17_INT_OUT0  { BYPASS_E12  { INT_NODE_IMUX_13_INT_OUT1 BYPASS_E6 INT_NODE_IMUX_1_INT_OUT1 IMUX_E1 }  INT_NODE_IMUX_14_INT_OUT0 IMUX_E37 }  IMUX_E39 }  INT_NODE_IMUX_17_INT_OUT1  { IMUX_E33 }  BYPASS_E9 INT_NODE_IMUX_24_INT_OUT0  { IMUX_E15 }  IMUX_E47 }  IMUX_E13 }"
-    G = Net.parse_routing_string(routing_string)
-    print('hi')

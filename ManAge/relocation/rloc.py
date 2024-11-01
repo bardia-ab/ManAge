@@ -1,18 +1,22 @@
-from itertools import chain
 from typing import Tuple, Set
 from xil_res.node import Node as nd
-from xil_res.path import Path
-from xil_res.cut import CUT
 import utility.config as cfg
 
 class RLOC:
 
-    ################### Tiles ########################
-    @staticmethod
-    def extract_path_tiles(path) -> Set[str]:
-        return {nd.get_tile(node) for node in path}
+    ################### Tiles ########################    
     @staticmethod
     def get_RLOC_tile(tile: str, origin:str) -> str:
+        """This function calculates the relative location of the specified tile regarding to the specified origin (INT tiles: INT_coordinate, CLB tiles: CLB_direction_coordinate)
+
+        :param tile: The tile to be relocated
+        :type tile: str
+        :param origin: Reference coordinate
+        :type origin: str
+        :raises ValueError: When the specified tile is invalid (other than either an INT tile or a CLB)
+        :return: Tile's identifier with a relative coordinate to the specified origin
+        :rtype: str
+        """
         if nd.get_tile_type(tile) == cfg.INT_label:
             RLOC_tile = f'{cfg.INT_label}_{nd.get_RLOC_coord(nd.get_tile(tile), origin)}'
         elif nd.get_tile_type(tile) == 'CLB':
@@ -24,6 +28,18 @@ class RLOC:
 
     @staticmethod
     def get_DLOC_tile(tiles_map, RLOC_tile: str, target_origin: str) -> str|None:
+        """This function returns the equivalent tile at the target origin if there is a valid tile there
+
+        :param tiles_map: Tiles map of the device under test
+        :type tiles_map: dict
+        :param RLOC_tile: Tile's identifier with a relative coordinate
+        :type RLOC_tile: str
+        :param target_origin: The origin of relocation
+        :type target_origin: str
+        :raises ValueError: When there is no valid tile at the target coordinate
+        :return: Relocated tile name
+        :rtype: str|None
+        """
         D_coord = nd.get_DLOC_coord(RLOC_tile, target_origin)
 
         if D_coord not in tiles_map:

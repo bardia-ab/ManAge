@@ -12,12 +12,27 @@ class Cell:
         return f'CELL(name={self.cell_name}, BEL={self.slice}/{self.bel})'
 
     def get_BEL(self):
+        """This function returns the BEL constraint of the cell
+
+        :return: BEL constraint
+        :rtype: str
+        """
         return f'set_property BEL {self.bel} [get_cells {self.cell_name}]\n'
 
     def get_LOC(self):
+        """This function returns the LOC constraint of the cell
+
+        :return: LOC constraint
+        :rtype: str
+        """
         return f'set_property LOC {self.slice} [get_cells {self.cell_name}]\n'
 
     def get_LOCK_PINS(self):
+        """This function returns the LOC_PINS constraint of a LUT
+
+        :return: LOC_PINS constraint
+        :rtype: str
+        """
         pairs = []
         for i, input in enumerate(self.inputs):
             pairs.append(f'I{i}:A{input[-1]}')
@@ -26,6 +41,11 @@ class Cell:
 
 
     def get_constraints(self):
+        """This function returns all required constraints of a cell
+
+        :return: A list of the cell's constraints
+        :rtype: List
+        """
         constraints = []
         constraints.append(self.get_BEL())
         constraints.append(self.get_LOC())

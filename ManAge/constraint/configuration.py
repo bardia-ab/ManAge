@@ -24,6 +24,17 @@ class ConstConfig:
         self.VHDL_file = tmpl.get_VHDL_file()
 
     def fill_cells(self, site_dict, cut: D_CUT, idx):
+        """This function adds the FFs and subLUTs of the specified CUT to the configuration
+
+        :param site_dict: A dictionary defining the site name of each CLB
+        :type site_dict: dict
+        :param cut: Relocated CUT
+        :type cut: D_CUT
+        :param idx: Index of the CUT in the netlist
+        :type idx: int
+        :raises ValueError: When the FF node is invalid
+        :raises ValueError: When the subLUT function is invalid
+        """
         for ff in cut.FFs:
             type = 'FF'
             slice = site_dict[ff.tile]
@@ -61,6 +72,13 @@ class ConstConfig:
             self.cells.append(cell)
 
     def fill_nets(self, cut: D_CUT, idx):
+        """This function adds the the net of the specified CUT to the configuration
+
+        :param cut: Relocated CUT
+        :type cut: D_CUT
+        :param idx: Index of the CUT in the netlist
+        :type idx: int
+        """
         g_buffer = Net.get_g_buffer(cut.G)
         G_net, G_route_thru = Net.get_subgraphs(cut.G, g_buffer)
 
@@ -75,6 +93,11 @@ class ConstConfig:
 
 
     def print_stats(self, path):
+        """This function creats a txt file reporting the segmentation statistics of the configuration required for the implementation
+
+        :param path: The path to the directory in which the file is to be stored
+        :type path: str
+        """
         with open(os.path.join(path, 'stats.txt'), 'w+') as file:
             if self.N_Partial > 0:
                 file.write(f'N_Segments = {self.N_Segments - 1}\n')
@@ -84,6 +107,11 @@ class ConstConfig:
             file.write(f'N_Partial = {self.N_Partial}')
 
     def print_constraints(self, path):
+        """This function creates the physical constraint file
+
+        :param path: The path to the directory in which the file is to be stored
+        :type path: str
+        """
         cell_constraints = [constraint for cell in self.cells for constraint in cell.get_constraints()]
         routing_constraints = [net.constraint for net in self.nets]
 
@@ -93,6 +121,11 @@ class ConstConfig:
             file.writelines(routing_constraints)
 
     def print_src_files(self, path):
+        """This function generates required RTL sources, constraints, and metadate for the implementation
+
+        :param path: The path to the directory in which the file is to be stored
+        :type path: str
+        """
         self.print_stats(path)
         self.print_constraints(path)
 
@@ -101,6 +134,16 @@ class ConstConfig:
 
     @staticmethod
     def split_function(D_CUT, method):
+        """This function returns an index for splitting a configuration into two in case of congestion
+
+        :param D_CUT: CUT
+        :type D_CUT: D_CUT
+        :param method: Criterion by which the splitting is done (x: X coordinate, y: Y coordinate, CUT_index: indices of CUTs, FF_in_index: FF index)
+        :type method: str
+        :raises ValueError: When the specified method is invalid
+        :return: Index
+        :rtype: int
+        """
         if method == 'x':
             return int(re.findall('\d+', D_CUT.origin)[0]) % 2
         elif method == 'y':
@@ -114,6 +157,15 @@ class ConstConfig:
 
     @staticmethod
     def split_D_CUTs(TC, method):
+        """This function splits CUTs of a configuration into two sets in case of congestion
+
+        :param TC: Test configuration
+        :type TC: Config
+        :param method: Criterion by which the splitting is done (x: X coordinate, y: Y coordinate, CUT_index: indices of CUTs, FF_in_index: FF index)
+        :type method: str
+        :return: Set of split CUTs
+        :rtype: List
+        """
         D_CUTs_even = [D_CUT for D_CUT in TC.D_CUTs if ConstConfig.split_function(D_CUT, method) == 0]
         D_CUTs_odd = [D_CUT for D_CUT in TC.D_CUTs if ConstConfig.split_function(D_CUT, method) == 1]
 
@@ -121,6 +173,13 @@ class ConstConfig:
 
     @staticmethod
     def fix_bels(TC, cut):
+        """This function fixes the bel attributes of subLUTs for the specified CUT
+
+        :param TC: Test configuration
+        :type TC: Config
+        :param cut: Specified CUT
+        :type cut: D_CUT|CUT
+        """
         for sublut in cut.subLUTs:
             LUT_primitive = TC.LUTs[sublut.get_LUT_name()]
             if len(LUT_primitive.subLUTs) == 1 and sublut.output is None:
@@ -148,6 +207,11 @@ class ConstConfig:
 
     @staticmethod
     def fix_TC_bels(TC):
+        """This function fixes the bel attributes of subLUTs in a configuration
+
+        :param TC: Test configuration
+        :type TC: Config
+        """
         for LUT_primitive in TC.LUTs.values():
             LUT_primitive.subLUTs.sort(key=lambda x: 0 if x.output else 1)
             for sublut in LUT_primitive.subLUTs:

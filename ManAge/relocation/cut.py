@@ -5,7 +5,6 @@ from xil_res.node import Node as nd
 from xil_res.edge import Edge
 from xil_res.primitive import FF, SubLUT
 from xil_res.path import Path
-from relocation.rloc import RLOC as rl
 import utility.config as cfg
 
 class D_CUT(CUT):
@@ -21,20 +20,31 @@ class D_CUT(CUT):
     def __repr__(self):
         return f'D_CUT(index={self.index}, origin={self.origin})'
 
-    def get_x_coord(self):
-        return nd.get_x_coord(self.origin)
-
-    def get_y_coord(self):
-        return nd.get_y_coord(self.origin)
-
     def get_nodes_dict(self, tiles_map, cut):
+        """This function creates a dictionary in which the kets are the nodes of the specified CUT and values are the relocated nodes to the current CUT's origin
+
+        :param tiles_map: Tiles map of the device under test
+        :type tiles_map: dict
+        :param cut: CUT object from the minimal test configuration
+        :type cut: CUT
+        :return: Nodes dictionary
+        :rtype: dict
+        """
         tiles_map = tiles_map
         nodes_dict = {node: nd.dislocate_node(tiles_map, node, self.origin, origin=cut.origin) for node in cut.G}
 
         return nodes_dict
 
     def get_relocated_FFs(self, tiles_map, cut):
-        #TC = rloc_collection.TC
+        """This function creates relocated FFs of the current CUT from the specified CUT
+
+        :param tiles_map: Tiles map of the device under test
+        :type tiles_map: dict
+        :param cut: CUT object from the minimal test configuration
+        :type cut: CUT
+        :return: FF objects
+        :rtype: Set[FF]
+        """
         tiles_map = tiles_map
         FFs = set()
         for FF_primitive in cut.FFs:
@@ -47,7 +57,15 @@ class D_CUT(CUT):
         return FFs
 
     def get_relocated_subLUTs(self, tiles_map, cut):
-        #TC = rloc_collection.TC
+        """This function creates relocated subLUTs of the current CUT from the specified CUT
+
+        :param tiles_map: Tiles map of the device under test
+        :type tiles_map: dict
+        :param cut: CUT object from the minimal test configuration
+        :type cut: CUT
+        :return: subLUT objects
+        :rtype: Set[subLUT]
+        """
         tiles_map = tiles_map
         subLUTs = set()
         for subLUT in cut.subLUTs:
@@ -60,13 +78,36 @@ class D_CUT(CUT):
         return subLUTs
 
     def validate_tiles(self):
+        """This function verifies that relative tiles locations in the original CUT can be found in current CUT's origin (some CLB tiles might be missing due to the heterogeneity of the chip)
+
+        :return: True|False 
+        :rtype: bool
+        """
         return None not in self.nodes_dict.values()
 
     def validate_wires(self, wires_dict):
+        """This function verifies the homogeneity of wires in the current CUT's origin
+
+        :param wires_dict: Dictionary of wires of the device in which the kets are tiles and values are the tiles' respective wires
+        :type wires_dict: dict
+        :return: True|False
+        :rtype: bool
+        """
         wires = filter(lambda edge: Edge(edge).get_type() == 'wire', self.G.edges)
         return all(map(lambda wire: wire in wires_dict[nd.get_tile(wire[0])], wires))
 
     def init_D_CUT(self, cut, tiles_map, wires_dict):
+        """This function relocates the specified CUT to a nwe origin and initialize the new CUT
+
+        :param cut: CUT object from the minimal test configuration
+        :type cut: CUT
+        :param tiles_map: Tiles map of the device under test
+        :type tiles_map: dict
+        :param wires_dict: Dictionary of wires of the device in which the kets are tiles and values are the tiles' respective wires
+        :type wires_dict: dict
+        :return: validity of the new CUT
+        :rtype: bool
+        """
         # Populate nodes_dict
         self.nodes_dict = self.get_nodes_dict(tiles_map, cut)
 
@@ -93,10 +134,17 @@ class D_CUT(CUT):
         return True
 
     def set_graph(self, cut):
+        """This function sets the graph of the relocated CUT
+
+        :param cut: CUT object from the minimal test configuration
+        :type cut: CUT
+        """
         edges = map(lambda e: (self.nodes_dict[e[0]], self.nodes_dict[e[1]]), cut.G.edges)
         self.G.add_edges_from(edges)
 
     def set_main_path(self):
+        """This function sets the main path of the relocated CUT
+        """
         try:
             src = next(node for node in self.G if cfg.Source_pattern.match(node))
             sink = next(node for node in self.G if cfg.Sink_pattern.match(node))
@@ -108,6 +156,11 @@ class D_CUT(CUT):
         self.main_path. nodes = nx.shortest_path(self.G, src, sink)
 
     def get_g_buffer(self):
+        """This function determines the type of route-thru in this CUT
+
+        :return: Type of the route-thru
+        :rtype: str
+        """
         if list(filter(lambda x: re.match(cfg.MUXED_CLB_out_pattern, x), self.G)):
             g_buffer = "00"
 
@@ -140,54 +193,3 @@ class D_CUT(CUT):
             g_buffer = "00"
 
         return g_buffer
-
-    def get_RLOC_G(self, cut):
-        RLOC_G = nx.DiGraph()
-        for edge in cut.G.edges:
-            RLOC_edge = []
-            for node in edge:
-                RLOC_node = nd.get_RLOC_node(node, cut.origin)
-                if RLOC_node not in self.nodes_dict:
-                    self.nodes_dict[node] = RLOC_node
-
-                RLOC_edge.append(RLOC_node)
-            #RLOC_edge = tuple(map(lambda node: nd.get_RLOC_node(node, self.origin), edge))
-            RLOC_G.add_edge(*RLOC_edge)
-
-        return RLOC_G
-
-    def get_DLOC_G(self, tiles_map, RLOC_G):
-        reversed_nodes_dict = {value: key for key, value in self.nodes_dict.items()}
-        DLOC_G = nx.DiGraph()
-        for edge in RLOC_G.edges:
-            DLOC_edge = []
-            for RLOC_node in edge:
-                DLOC_node = self.get_DLOC_node(tiles_map, RLOC_node)
-                node = reversed_nodes_dict[RLOC_node]
-                self.nodes_dict[node] = DLOC_node
-
-                DLOC_edge.append(DLOC_node)
-            #DLOC_edge = tuple(map(lambda node: self.get_DLOC_node(tiles_map, node), edge))
-            DLOC_G.add_edge(*DLOC_edge)
-
-        return DLOC_G
-
-    def get_DLOC_node(self, tiles_map, RLOC_node):
-        if nd.get_tile_type(RLOC_node) == cfg.INT_label:
-            tile = f'{cfg.INT_label}_{self.origin}'
-            port = nd.get_port(RLOC_node)
-        else:
-            direction = RLOC_node.split('_')[1]
-            tile = tiles_map[self.origin][f'CLB_{direction}']
-            port = f'CLE_CLE_{nd.get_site_type(tile)}_SITE_0_{nd.get_port(RLOC_node)}'
-
-        return f'{tile}/{port}'
-    def verify_RLOC_tiles(self, tiles_map, RLOC_G):
-        RLOC_tiles = {nd.get_tile(node) for node in RLOC_G}
-        DLOC_tiles = {rl.get_DLOC_tile(tiles_map, RLOC_tile, self.origin) for RLOC_tile in RLOC_tiles}
-
-        return all(map(lambda tile: tile is not None, DLOC_tiles))
-
-    def verify_wire(self, wires_dict, DLOC_G):
-        wires = filter(lambda edge: Edge(edge).get_type() == 'wire', DLOC_G.edges)
-        return all(map(lambda edge: edge in wires_dict[nd.get_tile(edge[0])],wires))
