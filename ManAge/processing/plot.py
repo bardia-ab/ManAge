@@ -445,8 +445,8 @@ def axis_setting(ax, xlabel, ylabel, counts=None, bins=None, patches=None, mean=
     plt.apply_spine_settings(ax, plot_settings)
 
     # Adjust tick parameters for padding
-    ax.tick_params(axis='x', which='major', pad=plot_settings['xtick.major.pad'])
-    ax.tick_params(axis='y', which='major', pad=plot_settings['ytick.major.pad'])
+    ax.tick_params(axis='x', which='major', pad=plot_settings['xtick.major.pad'], labelrotation=plot_settings['xtick.labelrotation'])
+    ax.tick_params(axis='y', which='major', pad=plot_settings['ytick.major.pad'], labelrotation=plot_settings['ytick.labelrotation'])
     ax.tick_params(axis='x', which='minor', pad=plot_settings['xtick.minor.pad'])
     ax.tick_params(axis='y', which='minor', pad=plot_settings['ytick.minor.pad'])
 
