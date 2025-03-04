@@ -20,7 +20,6 @@ parser.add_argument('device_name', choices=Arch.get_models(), help='Specify the 
 parser.add_argument('config_file', help="Specify the path to the configuration file or a set of configuration files")
 parser.add_argument('store_dir', help="Specify the directory to store TCs' constraint files")
 parser.add_argument('N_Parallel', type=int, help="Specify the number of parallel CUTs in a segment")
-parser.add_argument('cuts_list_file', help="Specify the path to the output cuts list file")
 
 parser.add_argument('-c', '--CUTs_count', type=int, help="Limit the number of CUTs whose constraints are desired to be generated")
 parser.add_argument('-s', '--split', choices=['even', 'odd'], help="Specify whether the CUTs must be split or not")
@@ -70,8 +69,16 @@ if __name__ == '__main__':
             CUTs = CUTs[:args.CUTs_count]
 
         # Split CUTs
+        suffix = ''
         if args.split:
             CUTs = ConstConfig.split_D_CUTs(CUTs, args.split_method)
+
+            if args.split == 'even':
+                CUTs = CUTs[0]
+                suffix = '_even'
+            else:
+                CUTs = CUTs[1]
+                suffix = '_odd'
 
         # Create a configuration for constraints
         N_CUTs = len(CUTs)
@@ -107,14 +114,8 @@ if __name__ == '__main__':
             configuration.VHDL_file.add_components(''.join(VHDL_codes))
 
         # Print constraints
-        store_dir = Path(args.store_dir) / config_file.stem
+        store_dir = Path(args.store_dir) / (config_file.stem + suffix)
         Path(store_dir).mkdir(parents=True, exist_ok=True)
         configuration.print_src_files(store_dir)
 
         pbar.update(1)
-
-    # Store CUTs list
-    cuts_list_dir, file = Path(args.cuts_list_file).parent, Path(args.cuts_list_file).name
-    cuts_list_dir.mkdir(parents=True, exist_ok=True)
-
-    util.store_data(cuts_list_dir, file, cuts_list)
