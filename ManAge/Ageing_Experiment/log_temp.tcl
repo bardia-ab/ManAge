@@ -8,9 +8,12 @@ current_hw_device [lindex [get_hw_devices] 0]
 refresh_hw_device [lindex [get_hw_devices] 0]	-quiet
 set temp [get_property TEMPERATURE [lindex [get_hw_sysmons] 0]]
 
-set file [open $temp_file w+]
-puts $file "Temperature,current_time"
-close $file
+if {[file exists $temp_file] != 1] {
+    set file [open $temp_file a+]
+    puts $file "Temperature,current_time,current_date"
+    close $file
+}
+
 set i 0
 set t1 [clock seconds]
 while {1} {
@@ -19,7 +22,7 @@ while {1} {
 	set temp [get_property TEMPERATURE [lindex [get_hw_sysmons] 0]]
 	set i [expr $i + 1]
 	set systemTime [clock seconds]
-	puts $file "$temp,[clock format $systemTime -format %H:%M:%S]"
+	puts $file "$temp,[clock format $systemTime -format %H:%M:%S],[clock format [clock seconds] -format "%Y-%m-%d"]"
 	after 1000
 	close $file
 
