@@ -8,7 +8,7 @@ Linux:
   arch_graph_path     : /home/bardia/Desktop/bardia/Architecture Graph/ZCU9EG
   Data_path           : /home/bardia/Desktop/bardia/ManAge_Data/Data_xcvu9p_full
   vivado_project_path :
-  pyteman_path        : /home/bardia/Downloads/pyteman/pyteman_dist
+  pyteman_path        : /home/bardia/Downloads/pyteman/pyteman_dist_nov24
 
 General:
   print_message : False
