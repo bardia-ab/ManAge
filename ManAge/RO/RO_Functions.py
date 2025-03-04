@@ -242,6 +242,26 @@ def relocate(fasm_list, new_tile):
 
     return new_fasm_list
 
+def relocate2(device, fasm_list, ref_coord, new_coord):
+    new_fasm_list = []
+    for entry in fasm_list:
+        tile = entry.split('.')[0]
+        RLOC_tile = nd.get_RLOC_tile(tile, ref_coord)
+        D_coord = nd.get_DLOC_coord(RLOC_tile, new_coord)
+        if tile.startswith('CLE'):
+            direction = RLOC_tile.split('_')[1]
+            DLOC_tile = device.tiles_map[D_coord][f'CLB_{direction}']
+        elif tile.startswith('BRAM'):
+            DLOC_tile = f'BRAM_{D_coord}'
+            if DLOC_tile not in device.tiles:
+                continue
+        else:
+            DLOC_tile = f'INT_{D_coord}'
+
+        new_fasm_list.append(entry.replace(tile, DLOC_tile))
+
+    return new_fasm_list
+
 def preserve_clk_pips(G, clk_pips):
     removed_pips = set()
     if Path(clk_pips).exists():
