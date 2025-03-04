@@ -231,9 +231,9 @@ def fill_D_CUTs(TC_CUT_path, TC):
     TC_label = TC.split('_')[0]
     TC_CUT = util.load_data(TC_CUT_path, f'{TC_label}.data')
     if 'even' in TC:
-        D_CUTs, _ = ConstConfig.split_D_CUTs(TC_CUT, 'FF_in_index')
+        D_CUTs, _ = ConstConfig.split_D_CUTs(TC_CUT.D_CUTs, 'FF_in_index')
     elif 'odd' in TC:
-        _, D_CUTs = ConstConfig.split_D_CUTs(TC_CUT, 'FF_in_index')
+        _, D_CUTs = ConstConfig.split_D_CUTs(TC_CUT.D_CUTs, 'FF_in_index')
     else:
         D_CUTs = [D_CUT for D_CUT in TC_CUT.D_CUTs]
 
