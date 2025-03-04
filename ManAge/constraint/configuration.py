@@ -156,18 +156,18 @@ class ConstConfig:
             raise ValueError(f'Method {method} is invalid')
 
     @staticmethod
-    def split_D_CUTs(TC, method):
+    def split_D_CUTs(CUTs, method):
         """This function splits CUTs of a configuration into two sets in case of congestion
 
-        :param TC: Test configuration
-        :type TC: Config
+        :param CUTs: List of CUTs
+        :type CUTs: List
         :param method: Criterion by which the splitting is done (x: X coordinate, y: Y coordinate, CUT_index: indices of CUTs, FF_in_index: FF index)
         :type method: str
         :return: Set of split CUTs
         :rtype: List
         """
-        D_CUTs_even = [D_CUT for D_CUT in TC.D_CUTs if ConstConfig.split_function(D_CUT, method) == 0]
-        D_CUTs_odd = [D_CUT for D_CUT in TC.D_CUTs if ConstConfig.split_function(D_CUT, method) == 1]
+        D_CUTs_even = [D_CUT for D_CUT in CUTs if ConstConfig.split_function(D_CUT, method) == 0]
+        D_CUTs_odd = [D_CUT for D_CUT in CUTs if ConstConfig.split_function(D_CUT, method) == 1]
 
         return D_CUTs_even, D_CUTs_odd
 
