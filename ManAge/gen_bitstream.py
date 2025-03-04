@@ -14,6 +14,7 @@ parser.add_argument('log_dir', help="Specify the directory into which the output
 
 parser.add_argument('-n', '--N_Parallel', type=int, default=cfg.N_Parallel, help="Specify the number of parallel CUTs in a segment")
 parser.add_argument('-d', '--dummy_FF', help="Specify the path to the dummy FF constraint file")
+parser.add_argument('--overwrite', action='store_true', help="Overwrites bitstreams whose log files already exist")
 
 if __name__ == '__main__':
     # Parse arguments
@@ -40,6 +41,9 @@ if __name__ == '__main__':
         bitstream_file = Path(args.bitstream_dir) / TC_src_dir.with_suffix('.bit').name
         DCP_file = Path(args.DCP_dir) / TC_src_dir.with_suffix('.dcp').name
         log_file = Path(args.log_dir) / TC_src_dir.with_suffix('.log').name
+
+        if not args.overwrite and log_file.exists():
+            continue
 
         tcl_args = [f'"{args.proj_file}"', f'"{TC_src_dir}"', f'"{N_segments}"', f'"{args.N_Parallel}"',
                     f'"{N_Partial}"', f'"{bitstream_file}"', f'"{DCP_file}"', f'"{log_file}"']
