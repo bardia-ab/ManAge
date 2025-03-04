@@ -307,7 +307,7 @@ if __name__ == '__main__':
                     edge_type_freq_dict = util.load_data(args.input_df_dir, edge_type_freq_dict_file.name)
                     trans_aged_edge_freq_dict = get_edge_type_regex_freq_dict(trans_aged_df, edge_type)
                     norm_trans_aged_edge_freq_dict = {k: v / edge_type_freq_dict[k] for k, v in
-                                                      trans_aged_edge_freq_dict.items()}
+                                                      trans_aged_edge_freq_dict.items() if k in edge_type_freq_dict}
 
                     # Aged edges bar plot
                     plot_settings['axes.labelsize'] = args.axes_labelsize
