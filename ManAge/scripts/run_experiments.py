@@ -8,11 +8,11 @@ import utility.config as cfg
 
 # Experiment Parameters
 baud_rate = 230400
-COM_port = '/dev/ttyUSB0'
+COM_port = '/dev/ttyUSB2'
 N_Parallel = 50
 
 # Required Directories
-Data_path           = '/home/bardia/Desktop/bardia/ManAge_Data/Data_xczu9eg'
+Data_path           = '/home/bardia/Desktop/bardia/ManAge_Data/Data_xcvu9p'
 bitstream_path      = Path(Data_path) / 'Bitstreams'        # program
 results_path        = Path(Data_path) / 'Results'           # store
 vivado_srcs_path    = Path(Data_path) / 'Vivado_Resources'    # validation
@@ -22,7 +22,7 @@ vivado_srcs_path    = Path(Data_path) / 'Vivado_Resources'    # validation
 
 # Setup pbar
 #CRs = sorted(os.listdir(bitstream_path), key=lambda x: int(re.findall('\d+', x)[0]))
-CRs = ['X2Y5']
+CRs = ['X2Y12']
 pbar = tqdm(total=len([file for file in bitstream_path.rglob('*.bit')]))
 
 for CR in CRs:
@@ -30,7 +30,7 @@ for CR in CRs:
     # CR Directories
     CR_bitstream_path   = Path(bitstream_path) / CR
     CR_results_path     = Path(results_path) / CR
-    CR_vivado_srcs_path = Path(vivado_srcs_path) / CR
+    #CR_vivado_srcs_path = Path(vivado_srcs_path) / CR
 
     # Create a Folder for CR in vivado_srcs_path
     CR_results_path.mkdir(parents=True, exist_ok=True)
@@ -42,8 +42,9 @@ for CR in CRs:
     experiment_script = Path(__file__).parent.parent / 'run_experiment.py'
     for TC in TCs:
         pbar.set_description(f'{CR} >> {TC.stem}')
+        CR_vivado_srcs_path = Path(vivado_srcs_path) / CR / TC.stem
 
-        command = f'{cfg.python} "{experiment_script}" run {CR_vivado_srcs_path} {CR_results_path} {N_Parallel} {TC} {COM_port} {baud_rate} -RFB'
+        command = f'{cfg.python} "{experiment_script}" run {CR_vivado_srcs_path} {CR_results_path} {N_Parallel} {TC} {COM_port} {baud_rate} -RFB -t 30'
         result = subprocess.run(command, shell=True, capture_output=True, text=True)
 
         # Check for errors

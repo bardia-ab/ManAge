@@ -6,16 +6,16 @@ os.chdir(str(Path(__file__).parent.parent))
 
 from Ageing_Experiment.Ageing import Ageing
 
-RO_bitstream = '/home/bardia/Desktop/bardia/ManAge_Data/Ageing_Experiment/RO_design/ageing.bit'
-blank_bitstream = '/home/bardia/Desktop/bardia/ManAge_Data/Ageing_Experiment/RO_design/blank_zu9eg_jtag.bit'
+RO_bitstream = '/home/bardia/Desktop/bardia/ManAge_Data/Data_xcvu9p_full/Ageing_Experiment/X38_53_Y723_776.bit'
+blank_bitstream = '/home/bardia/Desktop/bardia/ManAge_Data/Data_xcvu9p_full/Ageing_Experiment/blank_vu9p.bit'
 N_Parallel = 50
-cycles = 14
+cycles = 21
 
 ageing_exp = Ageing(RO_bitstream, blank_bitstream, N_Parallel)
 
 # set UART
 baud_rate = 230400
-serial_port = '/dev/ttyUSB0'
+serial_port = '/dev/ttyUSB3'
 ageing_exp.set_UART(baud_rate, serial_port)
 
 # set timing
@@ -28,16 +28,16 @@ one_day = 24 * 60 * 60
 ageing_exp.set_timing(initial_heatup_time, initial_recovery_time, burning_time, recovery_time)
 
 # set minimal characterization paths
-min_vivado_srcs_dir = '/home/bardia/Desktop/bardia/Timing_Characterization/Backup/Data_xczu9eg/Vivado_Sources/X2Y1'
-min_bitstreams_dir = '/home/bardia/Desktop/bardia/Timing_Characterization/Backup/Data_xczu9eg/Bitstreams/X2Y1'
-min_results_dir = '/home/bardia/Desktop/bardia/ManAge_Data/Ageing_Experiment/Results_12_08_2024/minimal_char'
+min_vivado_srcs_dir = '/home/bardia/Desktop/bardia/ManAge_Data/Data_xcvu9p/Vivado_Resources/X2Y12'
+min_bitstreams_dir = '/home/bardia/Desktop/bardia/ManAge_Data/Data_xcvu9p/Bitstreams/X2Y12'
+min_results_dir = '/home/bardia/Desktop/bardia/ManAge_Data/Data_xcvu9p/Ageing_Experiment/Result/minimal_char'
 
 ageing_exp.set_min_char(min_vivado_srcs_dir, min_bitstreams_dir, min_results_dir)
 
 # set full characterization paths
-full_vivado_srcs_dir = '/home/bardia/Desktop/bardia/Timing_Characterization/CR_X2Y1/Vivado_Sources'
-full_bitstreams_dir = '/home/bardia/Desktop/bardia/Timing_Characterization/CR_X2Y1/Bitstreams'
-full_results_dir = '/home/bardia/Desktop/bardia/ManAge_Data/Ageing_Experiment/Results_12_08_2024/full_char'
+full_vivado_srcs_dir = '/home/bardia/Desktop/bardia/ManAge_Data/Data_xcvu9p_full/Vivado_Resources'
+full_bitstreams_dir = '/home/bardia/Desktop/bardia/ManAge_Data/Data_xcvu9p_full/Bitstreams'
+full_results_dir = '/home/bardia/Desktop/bardia/ManAge_Data/Data_xcvu9p_full/Ageing_Experiment/Result/full_char'
 
 ageing_exp.set_full_char(full_vivado_srcs_dir, full_bitstreams_dir, full_results_dir)
 

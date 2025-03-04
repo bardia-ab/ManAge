@@ -6,12 +6,12 @@ os.chdir(str(Path(__file__).absolute().parent.parent))
 from xil_res.architecture import Arch
 import utility.config as cfg
 
-CR = 'X2Y1'
-TCs_path = rf'C:\Users\t26607bb\Desktop\CPS_Project\Path_Search\Ageing_Experiment\PV_TCs\split_TC\X2Y1'
+CR = 'X2Y5'
+TCs_path = rf'/home/bardia/Desktop/bardia/ManAge_Data/Data_xczu9eg/Configurations/X2Y5'
 #TCs_path = rf'C:\Users\t26607bb\Desktop\CPS_Project\Path_Search\Ageing_Experiment_full\Configurations\X2Y1'
-TCs_result_path = r'C:\Users\t26607bb\Desktop\CPS_Project\Path_Search\Ageing_Experiment\Results\minimal'
+TCs_result_path = r'/home/bardia/Desktop/bardia/ManAge_Data/Data_xczu9eg_full/Ageing_Experiment/Result/minimal_char'
 skew_path = None
-store_path = r'C:\Users\t26607bb\Desktop\CPS_Project\Path_Search\Ageing_Experiment\CUTs_list'
+store_path = r'/home/bardia/Desktop/bardia/ManAge_Data/Data_xczu9eg_full/Ageing_Experiment/Processing/minimal_char/CUTs_list'
 file_name = f'cuts_list_{CR}.data'
 
 device = Arch('xczu9eg')
@@ -27,20 +27,20 @@ for iter in iterations:
     pbar.set_postfix_str('CUTs List')
     store_file = Path(store_path) / iter.name / file_name
     script = str(Path(__file__).parent.parent / 'processing' / 'populate_cut_delays.py')
-    #subprocess.run([cfg.python, script, TCs_path, str(iter), str(skew_path), store_file], capture_output=False, text=True, encoding='utf-8')
+    subprocess.run([cfg.python, script, TCs_path, str(iter), str(skew_path), store_file], capture_output=False, text=True, encoding='utf-8')
 
     # create heatmap
     pbar.set_postfix_str('Heatmap')
     cuts_list_file = store_file
     heatmap_store_path = Path(cuts_list_file).parent.parent.parent / 'heatmap' / iter.name
-    store_file_suffix = 'X2Y1'
+    store_file_suffix = 'X2Y5'
     xmin, xmax, ymin, ymax = device.get_device_dimension()
     xmin = str(xmin)
     xmax = str(xmax)
     ymin = str(ymin)
     ymax = str(ymax)
     script = str(Path(__file__).parent.parent / 'processing' / 'delay_heatmap.py')
-    #subprocess.run([cfg.python, script, cuts_list_file, heatmap_store_path, store_file_suffix, xmin, xmax, ymin, ymax], capture_output=True, text=True, encoding='utf-8')
+    subprocess.run([cfg.python, script, cuts_list_file, heatmap_store_path, store_file_suffix, xmin, xmax, ymin, ymax], capture_output=True, text=True, encoding='utf-8')
 
     # create diff heatmap
     pbar.set_postfix_str('Difference Heatmap')
@@ -58,6 +58,6 @@ for iter in iterations:
         continue
 
     script = str(Path(__file__).parent.parent / 'processing' / 'compare_Ageing.py')
-    #subprocess.run([cfg.python, script, ref_cuts_list_file, cuts_list_file, df_store_path, df_file_name], capture_output=False, text=True, encoding='utf-8')
+    subprocess.run([cfg.python, script, ref_cuts_list_file, cuts_list_file, df_store_path, df_file_name], capture_output=False, text=True, encoding='utf-8')
 
     pbar.update(1)
