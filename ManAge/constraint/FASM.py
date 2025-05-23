@@ -55,6 +55,9 @@ def get_pips_FASM(*pips, mode=None):
     value = {'set': 1, 'clear': 0, None:'{}'}
     FASM_list = set()
     for pip in pips:
+        if pip[0].startswith('CLE'):
+            continue
+
         suffix = get_pip_suffix(pip)
         FASM_list.add(get_pip_setting(pip, suffix, value[mode]))
 
