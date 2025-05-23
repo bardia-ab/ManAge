@@ -6,7 +6,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 from matplotlib.ticker import ScalarFormatter
-import matplotlib.cm as cm  # Import colormap module
 from xil_res.node import Node as nd
 import utility.config as cfg
 
@@ -19,9 +18,9 @@ plot_settings = {
     'xtick.color': 'black',
     'ytick.color': 'black',
     'axes.titlesize': 16,
-    'axes.titleweight': 'bold',
+    'axes.titleweight': 'normal',
     'axes.labelsize': 14,
-    'axes.labelweight': 'bold',
+    'axes.labelweight': 'normal',
     'xtick.labelsize': 12,
     'ytick.labelsize': 12,
     'xtick.major.width': 1.0,
@@ -46,8 +45,8 @@ plot_settings = {
     'text.boxstyle': {'facecolor': 'white', 'edgecolor': 'lightgray', 'boxstyle': 'round,pad=0.5'},
     'text.horizontalalignment': 'left',
     'text.verticalalignment': 'top',
-    'text.fontsize': 12,
-    'text.fontweight': 'bold',
+    'text.fontsize': 20,
+    'text.fontweight': 'normal',
     'text.x': 0.85,
     'text.y': 0.95,
 
@@ -113,6 +112,12 @@ def apply_plot_settings(settings):
         if key.startswith('text.')
     }
 
+    plt.tick_settings = {
+        key.split('.')[-1]: value
+        for key, value in settings.items()
+        if key.startswith('xtick') or key.startswith('ytick')
+    }
+
     # Apply spine settings
     def apply_spine_settings(ax, settings):
         for spine in ['top', 'right', 'bottom', 'left']:
@@ -173,16 +178,17 @@ def print_heatmap(input_dict, all_coords, rows, columns, store_file, palette, xl
     custom_palette = sns.color_palette(palette, len(types))
 
     # font
-    font = {'family': 'Arial', 'color': 'black', 'weight': 'normal', 'size': 20}
+    font = {'family': 'Arial', 'color': 'black', 'weight': 'normal', 'size': 30}
 
     # Plot
     plt.figure(figsize=figsize)
     #ax = sns.heatmap(df, mask=mask, cmap=custom_palette, vmin=-3e-13, vmax=2e-13, cbar=False)
-    ax = sns.heatmap(df, mask=mask, cmap=custom_palette, cbar=False)
+    df = df * 10 ** 12
+    ax = sns.heatmap(df, mask=mask, cmap=custom_palette, cbar=False, cbar_kws={'label': 'Delay (ps)'})
 
     # Add color bar manually
     cbar = plt.colorbar(ax.collections[0], ax=ax.axes, orientation='vertical')
-    cbar.set_label('', fontsize=20)  # Set label with desired font size
+    cbar.set_label('Delay (ps)', fontsize=30, labelpad=15)  # Set label with desired font size
     cbar.ax.tick_params(labelsize=20)  # Set tick font size
 
     # Remove the color bar border
@@ -191,21 +197,21 @@ def print_heatmap(input_dict, all_coords, rows, columns, store_file, palette, xl
     # Set ticks to scientific notation
     cbar.ax.yaxis.set_major_formatter(ScalarFormatter(useMathText=True))
     cbar.ax.yaxis.get_offset_text().set_fontsize(20)  # Set the font size for the offset text (e.g., x10^3)
-    cbar.ax.tick_params(labelsize=20)  # Adjust font size for the ticks
+    cbar.ax.tick_params(labelsize=30)  # Adjust font size for the ticks
 
     ax.set_xlabel(xlabel, fontdict=font, labelpad=15)
     ax.set_ylabel(ylabel, fontdict=font, labelpad=15)
     #ax.set(xlabel=xlabel, ylabel=ylabel, fontdict=font)
 
-    plt.xticks(fontsize=15, fontfamily='Arial')
-    plt.yticks(fontsize=15, fontfamily='Arial')
+    plt.xticks(fontsize=25, fontfamily='Arial')
+    plt.yticks(fontsize=25, fontfamily='Arial')
 
     # Setting xticks and yticks based on maximum number allowed
     x_indices, x_labels = get_ticks_for_axis(len(columns))
     ax.set_xticks(x_indices)
-    ax.set_xticklabels([list(columns)[i] for i in x_indices], rotation=0)  # Adjust rotation if necessary
+    ax.set_xticklabels([list(columns)[i] for i in x_indices], rotation=90)  # Adjust rotation if necessary
 
-    y_indices, y_labels = get_ticks_for_axis(len(rows), max_ticks=15)
+    y_indices, y_labels = get_ticks_for_axis(len(rows), max_ticks=10)
     ax.set_yticks(y_indices)
     ax.set_yticklabels([list(rows)[::-1][i] for i in y_indices], rotation=0)
 
@@ -270,7 +276,7 @@ def get_data_matrix(input_dict, all_coords, apply_type=True):
 
     return data
 
-def plot_hist(ageing_list, store_file, figsize=(12, 8)):
+def plot_hist(ageing_list, store_file, figsize=(12, 8), xlabel='Degradation (%)'):
     fig, ax = plt.subplots(figsize=figsize)
     counts, bins, patches = plt.hist(ageing_list, bins=10, color=plot_settings['hist.facecolor'],
                                      alpha=plot_settings['hist.alpha'], edgecolor='white')
@@ -278,7 +284,7 @@ def plot_hist(ageing_list, store_file, figsize=(12, 8)):
     mean = np.mean(ageing_list)
     std = np.std(ageing_list)
 
-    axis_setting(ax, 'Degradation (%)', 'Occurrence', counts=counts, bins=bins, patches=patches, mean=mean, std=std)
+    axis_setting(ax, xlabel, 'Occurrence', counts=counts, bins=bins, patches=patches, mean=mean, std=std)
     plt.savefig(store_file, bbox_inches='tight')
 
     return bins
@@ -445,12 +451,12 @@ def axis_setting(ax, xlabel, ylabel, counts=None, bins=None, patches=None, mean=
     plt.apply_spine_settings(ax, plot_settings)
 
     # Adjust tick parameters for padding
-    ax.tick_params(axis='x', which='major', pad=plot_settings['xtick.major.pad'], labelrotation=plot_settings['xtick.labelrotation'])
-    ax.tick_params(axis='y', which='major', pad=plot_settings['ytick.major.pad'], labelrotation=plot_settings['ytick.labelrotation'])
+    ax.tick_params(axis='x', which='major', pad=plot_settings['xtick.major.pad'], labelrotation=plot_settings['xtick.labelrotation'], labelsize=plot_settings['xtick.labelsize'])
+    ax.tick_params(axis='y', which='major', pad=plot_settings['ytick.major.pad'], labelrotation=plot_settings['ytick.labelrotation'], labelsize=plot_settings['ytick.labelsize'])
     ax.tick_params(axis='x', which='minor', pad=plot_settings['xtick.minor.pad'])
     ax.tick_params(axis='y', which='minor', pad=plot_settings['ytick.minor.pad'])
 
-    font_annot = {'family': 'Arial', 'color': 'black', 'weight': 'normal', 'size': 10}
+    font_annot = {'family': 'Arial', 'color': 'black', 'weight': 'normal', 'size': 20}
 
     if all(map(lambda x: x is not None, (counts, bins, patches))):
 
