@@ -2,7 +2,7 @@ Windows:
   arch_graph_path     : C:\Users\t26607bb\Desktop\graph_zcu9eg
   Data_path           : C:\Users\t26607bb\Desktop\CPS_Project\Path_Search\Data_xczu9eg
   vivado_project_path : C:\Users\t26607bb\Desktop\Practice\CPS_ZCU104\vivado_proj
-  pyteman_path        : C:\Users\t26607bb\Desktop\Pyteman\pyteman_dist
+  pyteman_path        : C:\Users\t26607bb\Desktop\Pyteman\pyteman_dist_nov24
 
 Linux:
   arch_graph_path     : /home/bardia/Desktop/bardia/Architecture Graph/ZCU9EG
