@@ -36,6 +36,7 @@ class Ageing:
         self.bitstream_ptr = 0
 
     def set_logger(self, general_loger_path, current_script, temp_script, multimeter_port, current_csv_file, temp_csv_file):
+        Path(general_loger_path).parent.mkdir(parents=True, exist_ok=True)
         self.general_logger = open(general_loger_path, 'a+')
         self.current_script = current_script
         self.temp_script = temp_script
@@ -155,11 +156,11 @@ class Ageing:
         self.terminate_process_and_children(self.process_temp)
         self.process_temp.wait()
 
-    def heatup_monitored(self, runaway_threshold, stab_tolerance, tolerance_dur):
+    def heatup_monitored(self, lower_threshold, runaway_threshold, stab_tolerance, tolerance_dur):
         start_time = time.time()
         while (time.time() - start_time < self.burning_time):
             remaining_burning_dur = self.burning_time - (time.time() - start_time)
-            status = self.monitor_csv(self.current_csv_file, runaway_threshold, stab_tolerance, remaining_burning_dur, duration=tolerance_dur)
+            status = self.monitor_csv(self.current_csv_file, lower_threshold, runaway_threshold, stab_tolerance, remaining_burning_dur, duration=tolerance_dur)
             if (status == -2):  # increase power
                 if self.bitstream_ptr < len(self.RO_bitstreams_list) - 1:
                     self.bitstream_ptr += 1
@@ -179,7 +180,7 @@ class Ageing:
         except psutil.NoSuchProcess:
             pass
 
-    def monitor_csv(self, file_path, threshold, tolerance, runtime, duration=5, interval=1):
+    def monitor_csv(self, file_path, lower_threshold, threshold, tolerance, runtime, duration=5, interval=1):
         """
         Monitor a CSV file and perform actions based on its content.
 
@@ -228,7 +229,7 @@ class Ageing:
                     if len(recent_values) > 1 and (time.time() - t1) >= (60 * duration):
                         earliest_time, earliest_value = recent_values[0]
                         #if abs(current_value - earliest_value) < tolerance:
-                        if (current_value < 3.05):
+                        if (current_value < lower_threshold):
                             #self.general_logger.write(f"Value difference {abs(current_value - earliest_value)} "
                                   #f"within tolerance {tolerance} between {earliest_time} and {current_time}. Triggering action.\n")
                             self.general_logger.write(f"Value: {current_value}, at {current_time}.\n")
