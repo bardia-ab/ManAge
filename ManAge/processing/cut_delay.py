@@ -75,3 +75,52 @@ class CUTs_List:
         both_avg = sum(cut.both_delay for cut in cuts) / len(edges)
 
         return coord, rising_avg, falling_avg, both_avg
+
+    @staticmethod
+    def get_diff_average_delay(cuts, ref_cuts):
+        diff_avg_dict = {}
+        coord_cut_dict = cuts.get_coord_cut_dict()
+        coord_ref_cut_dict = ref_cuts.get_coord_cut_dict()
+        for coord, CUTs in coord_cut_dict.items():
+            diff_avg_dict[coord] = []
+
+            for cut_delay in CUTs:
+                if cut_delay not in coord_ref_cut_dict[coord]:
+                    continue
+
+                ref_cut_delay = next(filter(lambda c: c == cut_delay, coord_ref_cut_dict[coord]))
+                cut_length = len(ref_cut_delay.edges)
+                diff_percent = 100 * (cut_delay.falling_delay - ref_cut_delay.falling_delay) / (ref_cut_delay.falling_delay)
+                diff_avg_dict[coord].append(diff_percent)
+
+            diff_avg_dict[coord] = sum(diff_avg_dict[coord]) / len(diff_avg_dict[coord])
+
+        return diff_avg_dict
+
+
+if __name__ == '__main__':
+    from utility.utility_functions import load_data
+    from xil_res.node import Node as nd
+    from pathlib import Path
+    from processing.plot import print_heatmap
+    import time
+
+    ref_cuts_list = load_data('/home/bardia/Desktop/bardia/ManAge_Data/Ageing_Experiment/XCZU9EG/3_X2Y5_22_11_2024/CUTs_list/minimal_char/iter0', 'X2Y5.data')
+    cuts_list = load_data('/home/bardia/Desktop/bardia/ManAge_Data/Ageing_Experiment/XCZU9EG/9_X2Y5_04_04_2025/CUTs_list/minimal_char/iter4', 'X2Y5.data')
+
+    t1 = time.time()
+    diff_avg_dict = CUTs_List.get_diff_average_delay(cuts_list, ref_cuts_list)
+    t2 = time.time()
+    print(t2 - t1)
+
+    # get device coordinates
+    coords = set(diff_avg_dict.keys())
+    rows = {nd.get_y_coord(coord) for coord in coords}
+    columns = {nd.get_x_coord(coord) for coord in coords}
+
+    # draw falling heatmap
+    output_trans_file_name = f'heatmap.pdf'
+    output_dir = Path('/home/bardia/Desktop/bardia/ManAge_Data/Ageing_Experiment/XCZU9EG/9_X2Y5_04_04_2025')
+    output_file = str(output_dir / output_trans_file_name)
+    print_heatmap(diff_avg_dict, coords, rows, columns, output_file, palette='rocket', xlabel='FPGA Columns',
+                  ylabel='FPGA Rows', figsize=(8,6), apply_type=False)
